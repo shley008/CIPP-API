@@ -28,7 +28,7 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -94,7 +94,6 @@ function Invoke-CIPPStandardPWcompanionAppAllowedState {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'companionAppAllowedState' -FieldValue $AuthStateCorrect -StoreAs bool -Tenant $Tenant
         if ($AuthStateCorrect -eq $true) {
             $FieldValue = $true
         } else {

@@ -38,12 +38,12 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
 
-    $TestResult = Test-CIPPStandardLicense -StandardName 'CustomBannedPasswordList' -TenantFilter $Tenant -RequiredCapabilities @('AAD_PREMIUM', 'AAD_PREMIUM_P2')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'CustomBannedPasswordList' -TenantFilter $Tenant -Preset Entra
 
     if ($TestResult -eq $false) {
         return $true
@@ -248,7 +248,6 @@ function Invoke-CIPPStandardCustomBannedPasswordList {
             }
         }
 
-        Add-CIPPBPAField -FieldName 'CustomBannedPasswordList' -CurrentValue $BannedPasswordState -ExpectedValue $ExpectedValue -StoreAs json -Tenant $tenant
         Set-CIPPStandardsCompareField -FieldName 'standards.CustomBannedPasswordList' -FieldValue $BannedPasswordState.Compliant -Tenant $tenant
     }
 

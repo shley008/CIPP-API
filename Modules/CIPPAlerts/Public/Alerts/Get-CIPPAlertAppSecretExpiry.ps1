@@ -4,7 +4,7 @@ function Get-CIPPAlertAppSecretExpiry {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -15,12 +15,15 @@ function Get-CIPPAlertAppSecretExpiry {
         Write-Host "Checking app expire for $($TenantFilter)"
         $appList = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/applications?`$select=appId,displayName,passwordCredentials" -tenantid $TenantFilter
     } catch {
+        $ErrorMessage = Get-CippException -Exception $_
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Application secret expiry alert: unable to list applications: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         return
     }
 
     $AlertData = [System.Collections.Generic.List[PSCustomObject]]::new()
 
     foreach ($App in $applist) {
+        if ($App.displayName -match 'ConnectSyncProvisioning') { continue }
         Write-Host "checking $($App.displayName)"
         if ($App.passwordCredentials) {
             foreach ($Credential in $App.passwordCredentials) {
@@ -40,7 +43,5 @@ function Get-CIPPAlertAppSecretExpiry {
             }
         }
     }
-    if ($AlertData) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-    }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

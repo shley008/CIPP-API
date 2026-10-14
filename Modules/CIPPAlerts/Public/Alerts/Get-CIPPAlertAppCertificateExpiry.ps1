@@ -4,7 +4,7 @@ function Get-CIPPAlertAppCertificateExpiry {
         Entrypoint
     #>
     [CmdletBinding()]
-    Param (
+    param (
         [Parameter(Mandatory = $false)]
         [Alias('input')]
         $InputValue,
@@ -13,14 +13,18 @@ function Get-CIPPAlertAppCertificateExpiry {
 
     $Now = Get-Date
     $AlertData = @()
+    # A cache read that fails is 'could not check', not 'nothing expiring': skip the reconcile so open items stay open.
+    $ReadFailed = $false
 
     try {
         $appList = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'Apps'
     } catch {
         $appList = @()
+        $ReadFailed = $true
     }
 
     $AppAlertData = foreach ($App in $appList) {
+        if ($App.displayName -match 'ConnectSyncProvisioning') { continue }
         if ($App.keyCredentials) {
             foreach ($Credential in $App.keyCredentials) {
                 if ($Credential.endDateTime -lt $Now.AddDays(30) -and $Credential.endDateTime -gt $Now.AddDays(-7)) {
@@ -39,9 +43,11 @@ function Get-CIPPAlertAppCertificateExpiry {
         $servicePrincipals = New-CIPPDbRequest -TenantFilter $TenantFilter -Type 'ServicePrincipals'
     } catch {
         $servicePrincipals = @()
+        $ReadFailed = $true
     }
 
     $SamlAlertData = foreach ($ServicePrincipal in $servicePrincipals) {
+        if ($ServicePrincipal.displayName -match 'ConnectSyncProvisioning') { continue }
         $ExpiryDate = $null
         if ($ServicePrincipal.preferredTokenSigningKeyEndDateTime) {
             $ExpiryDate = [datetime]$ServicePrincipal.preferredTokenSigningKeyEndDateTime
@@ -61,7 +67,9 @@ function Get-CIPPAlertAppCertificateExpiry {
         @($AppAlertData)
         @($SamlAlertData)
     ) | Where-Object { $null -ne $_ }
-    if ($AlertData) {
-        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
+    if ($ReadFailed) {
+        Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message 'App certificate expiry alert skipped: the application or service principal cache could not be read' -sev Info
+        return
     }
+    Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 }

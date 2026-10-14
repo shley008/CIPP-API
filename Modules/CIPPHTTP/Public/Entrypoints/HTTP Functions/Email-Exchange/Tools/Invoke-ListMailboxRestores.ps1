@@ -4,6 +4,8 @@ function Invoke-ListMailboxRestores {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists mailbox restore requests and their status for Exchange Online, with optional statistics for a specific restore operation.
     #>
     param($Request, $TriggerMetadata)
     # Interact with query parameters or the body of the request.
@@ -34,7 +36,7 @@ function Invoke-ListMailboxRestores {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

@@ -9,7 +9,11 @@ function Invoke-CippTestORCA156 {
         $Policies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoSafeLinksPolicies'
 
         if (-not $Policies) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA156' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Safe Links Policies are tracking user clicks' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Links'
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA156' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA156' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'Low' -Name 'Safe Links Policies are tracking user clicks' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Links'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA156' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in the database. Data collection for this tenant may not have completed yet - refresh the cache and try again.' -Risk 'Low' -Name 'Safe Links Policies are tracking user clicks' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Links'
+            }
             return
         }
 
@@ -26,16 +30,16 @@ function Invoke-CippTestORCA156 {
 
         if ($FailedPolicies.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All Safe Links policies are tracking user clicks.`n`n"
-            $Result += "**Compliant Policies:** $($PassedPolicies.Count)"
+            $Result = [System.Text.StringBuilder]::new("All Safe Links policies are tracking user clicks.`n`n")
+            $null = $Result.Append("**Compliant Policies:** $($PassedPolicies.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedPolicies.Count) Safe Links policies are not tracking user clicks.`n`n"
-            $Result += "**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n"
-            $Result += "| Policy Name | Track Clicks |`n"
-            $Result += "|------------|-------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedPolicies.Count) Safe Links policies are not tracking user clicks.`n`n")
+            $null = $Result.Append("**Non-Compliant Policies:** $($FailedPolicies.Count)`n`n")
+            $null = $Result.Append("| Policy Name | Track Clicks |`n")
+            $null = $Result.Append("|------------|-------------|`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.Identity) | $($Policy.TrackClicks) |`n"
+                $null = $Result.Append("| $($Policy.Identity) | $($Policy.TrackClicks) |`n")
             }
         }
 

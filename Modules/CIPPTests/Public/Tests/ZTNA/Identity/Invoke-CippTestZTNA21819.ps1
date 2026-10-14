@@ -10,18 +10,22 @@ function Invoke-CippTestZTNA21819 {
     try {
         # Get Global Administrator role (template ID: 62e90394-69f5-4237-9190-012177145e10)
         $Roles = Get-CIPPTestData -TenantFilter $Tenant -Type 'Roles'
-        $GlobalAdminRole = $Roles | Where-Object { $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' }
+        $GlobalAdminRole = $Roles.Where({ $_.roleTemplateId -eq '62e90394-69f5-4237-9190-012177145e10' })
 
         if (-not $GlobalAdminRole) {
             Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Low' -Name 'Activation alert for Global Administrator role assignment' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
             return
         }
 
-        # Get role management policy for Global Admin
+        # Get role management policy for Global Admin.
+        # This previously matched on effectiveRules.target.targetObjects.id — a property that does
+        # not exist on this response (target is {caller, operations, level, inheritableSettings,
+        # enforcedSettings}), so the policy was never found. roleDefinitionId carries the role's
+        # TEMPLATE id, which is the correct join.
         $RoleManagementPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'RoleManagementPolicies'
-        $GlobalAdminPolicy = $RoleManagementPolicies | Where-Object {
-            $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.effectiveRules.target.targetObjects.id -contains $GlobalAdminRole.id
-        }
+        $GlobalAdminPolicy = $RoleManagementPolicies.Where({
+            $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $GlobalAdminRole.roleTemplateId
+        }, 'First')[0]
 
         $Passed = 'Failed'
         $IsDefaultRecipientsEnabled = 'N/A'
@@ -29,9 +33,9 @@ function Invoke-CippTestZTNA21819 {
 
         if ($GlobalAdminPolicy) {
             # Find the notification rule for requestor end-user assignment
-            $NotificationRule = $GlobalAdminPolicy.effectiveRules | Where-Object {
+            $NotificationRule = $GlobalAdminPolicy.rules.Where({
                 $_.id -like '*Notification_Requestor_EndUser_Assignment*'
-            }
+            })
 
             if ($NotificationRule) {
                 $IsDefaultRecipientsEnabled = $NotificationRule.isDefaultRecipientsEnabled
@@ -48,13 +52,13 @@ function Invoke-CippTestZTNA21819 {
         }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = "Activation alerts are configured for Global Administrator role.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Activation alerts are configured for Global Administrator role.`n`n")
         } else {
-            $ResultMarkdown = "Activation alerts are missing or improperly configured for Global Administrator role.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Activation alerts are missing or improperly configured for Global Administrator role.`n`n")
         }
 
-        $ResultMarkdown += "| Role display name | Default recipients | Additional recipients |`n"
-        $ResultMarkdown += "| :---------------- | :----------------- | :------------------- |`n"
+        $null = $ResultMarkdown.Append("| Role display name | Default recipients | Additional recipients |`n")
+        $null = $ResultMarkdown.Append("| :---------------- | :----------------- | :------------------- |`n")
 
         $RoleLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles'
         $DisplayNameLink = "[$($GlobalAdminRole.displayName)]($RoleLink)"
@@ -73,7 +77,7 @@ function Invoke-CippTestZTNA21819 {
             $Recipients
         }
 
-        $ResultMarkdown += "| $DisplayNameLink | $DefaultRecipientsStatus | $RecipientsDisplay |`n"
+        $null = $ResultMarkdown.Append("| $DisplayNameLink | $DefaultRecipientsStatus | $RecipientsDisplay |`n")
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Low' -Name 'Activation alert for Global Administrator role assignment' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Privileged access'
 

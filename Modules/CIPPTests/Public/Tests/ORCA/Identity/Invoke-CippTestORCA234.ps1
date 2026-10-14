@@ -9,20 +9,24 @@ function Invoke-CippTestORCA234 {
         $AtpPolicy = Get-CIPPTestData -TenantFilter $Tenant -Type 'ExoAtpPolicyForO365'
 
         if (-not $AtpPolicy) {
-            Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA234' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in database. This may be due to missing required licenses or data collection not yet completed.' -Risk 'Medium' -Name 'Click through is disabled for Safe Documents' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            if (-not (Test-CIPPStandardLicense -StandardName 'ORCA234' -TenantFilter $Tenant -Preset DefenderForOffice365 -SkipLog)) {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA234' -TestType 'Identity' -Status 'Unlicensed' -ResultMarkdown 'This tenant is not licensed for Microsoft Defender for Office 365 (ATP). Required capabilities: ATP_ENTERPRISE, ATP_ENTERPRISE_GOV, THREAT_INTELLIGENCE, THREAT_INTELLIGENCE_GOV.' -Risk 'Medium' -Name 'Click through is disabled for Safe Documents' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            } else {
+                Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA234' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No data found in the database. Data collection for this tenant may not have completed yet - refresh the cache and try again.' -Risk 'Medium' -Name 'Click through is disabled for Safe Documents' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Attachments'
+            }
             return
         }
 
-        $Policy = $AtpPolicy | Select-Object -First 1
+        $Policy = @($AtpPolicy)[0]
 
         if ($Policy.AllowSafeDocsOpen -eq $false) {
             $Status = 'Passed'
-            $Result = "Click through is disabled for Safe Documents.`n`n"
-            $Result += "**AllowSafeDocsOpen:** $($Policy.AllowSafeDocsOpen)"
+            $Result = [System.Text.StringBuilder]::new("Click through is disabled for Safe Documents.`n`n")
+            $null = $Result.Append("**AllowSafeDocsOpen:** $($Policy.AllowSafeDocsOpen)")
         } else {
             $Status = 'Failed'
-            $Result = "Click through is enabled for Safe Documents.`n`n"
-            $Result += "**AllowSafeDocsOpen:** $($Policy.AllowSafeDocsOpen)"
+            $Result = [System.Text.StringBuilder]::new("Click through is enabled for Safe Documents.`n`n")
+            $null = $Result.Append("**AllowSafeDocsOpen:** $($Policy.AllowSafeDocsOpen)")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId 'ORCA234' -TestType 'Identity' -Status $Status -ResultMarkdown $Result -Risk 'Medium' -Name 'Click through is disabled for Safe Documents' -UserImpact 'Low' -ImplementationEffort 'Low' -Category 'Safe Attachments'

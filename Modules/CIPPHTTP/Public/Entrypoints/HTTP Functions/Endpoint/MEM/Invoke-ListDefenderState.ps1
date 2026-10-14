@@ -4,6 +4,8 @@ Function Invoke-ListDefenderState {
         Entrypoint
     .ROLE
         Endpoint.MEM.Read
+    .DESCRIPTION
+        Lists Microsoft Defender antivirus state and detected threats for Intune-managed devices in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -31,7 +33,7 @@ Function Invoke-ListDefenderState {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::OK
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = "$($ErrorMessage)"
     }
     return ([HttpResponseContext]@{

@@ -67,15 +67,22 @@ function Invoke-CippTestZTNA21818 {
         $Passed = $true
         $ExitLoop = $false
 
+        # roleDefinitionId carries the role's TEMPLATE id — matching it against $Role.id (the
+        # directoryRole instance id) never succeeded.
+        $PolicyByRoleId = @{}
+        foreach ($RolePolicy in $RoleManagementPolicies) {
+            if ($RolePolicy.scopeId -eq '/' -and $RolePolicy.scopeType -eq 'DirectoryRole' -and $RolePolicy.roleDefinitionId -and -not $PolicyByRoleId.ContainsKey("$($RolePolicy.roleDefinitionId)")) {
+                $PolicyByRoleId["$($RolePolicy.roleDefinitionId)"] = $RolePolicy
+            }
+        }
+
         foreach ($Role in $PrivilegedRoles) {
-            $Policy = $RoleManagementPolicies | Where-Object {
-                $_.scopeId -eq '/' -and $_.scopeType -eq 'DirectoryRole' -and $_.roleDefinitionId -eq $Role.id
-            } | Select-Object -First 1
+            $Policy = $PolicyByRoleId["$($Role.roleTemplateId)"]
 
             if (-not $Policy) { continue }
 
             foreach ($NotificationRuleId in $Notifications.RuleId) {
-                $Rule = $Policy.rules | Where-Object { $_.id -eq $NotificationRuleId } | Select-Object -First 1
+                $Rule = $Policy.rules.Where({ $_.id -eq $NotificationRuleId }, 'First')[0]
 
                 if ($Rule) {
                     $RuleWithRole = $Rule | Select-Object *, @{Name = 'RoleDisplayName'; Expression = { $Role.displayName } }
@@ -93,19 +100,19 @@ function Invoke-CippTestZTNA21818 {
         }
 
         if ($Passed) {
-            $ResultMarkdown = "Role notifications are properly configured for privileged role.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Role notifications are properly configured for privileged role.`n`n")
         } else {
-            $ResultMarkdown = "Role notifications are not properly configured.`n`nNote: To save time, this check stops when it finds the first role that does not have notifications. After fixing this role and all other roles, we recommend running the check again to verify.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("Role notifications are not properly configured.`n`nNote: To save time, this check stops when it finds the first role that does not have notifications. After fixing this role and all other roles, we recommend running the check again to verify.`n`n")
         }
 
-        $ResultMarkdown += "## Notifications for high privileged roles`n`n"
-        $ResultMarkdown += "| Role Name | Notification Scenario | Notification Type | Default Recipients Enabled | Additional Recipients |`n"
-        $ResultMarkdown += "| :-------- | :-------------------- | :---------------- | :------------------------- | :-------------------- |`n"
+        $null = $ResultMarkdown.Append("## Notifications for high privileged roles`n`n")
+        $null = $ResultMarkdown.Append("| Role Name | Notification Scenario | Notification Type | Default Recipients Enabled | Additional Recipients |`n")
+        $null = $ResultMarkdown.Append("| :-------- | :-------------------- | :---------------- | :------------------------- | :-------------------- |`n")
 
         foreach ($NotificationRule in $NotificationRules) {
-            $MatchingNotification = $Notifications | Where-Object { $_.RuleId -eq $NotificationRule.id }
+            $MatchingNotification = $Notifications.Where({ $_.RuleId -eq $NotificationRule.id })
             $Recipients = if ($NotificationRule.notificationRecipients) { ($NotificationRule.notificationRecipients -join ', ') } else { '' }
-            $ResultMarkdown += "| $($NotificationRule.roleDisplayName) | $($MatchingNotification.notificationScenario) | $($MatchingNotification.notificationType) | $($NotificationRule.isDefaultRecipientsEnabled) | $Recipients |`n"
+            $null = $ResultMarkdown.Append("| $($NotificationRule.roleDisplayName) | $($MatchingNotification.notificationScenario) | $($MatchingNotification.notificationType) | $($NotificationRule.isDefaultRecipientsEnabled) | $Recipients |`n")
         }
 
         $Status = if ($Passed) { 'Passed' } else { 'Failed' }

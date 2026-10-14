@@ -22,18 +22,26 @@ function Set-CIPPDBCacheExoAntiPhishPolicies {
         # Get Anti-Phishing policies
         $AntiPhishPolicies = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AntiPhishPolicy'
         if ($AntiPhishPolicies) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicies' -Data $AntiPhishPolicies
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicies' -Data $AntiPhishPolicies -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicies' -Data $AntiPhishPolicies -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AntiPhishPolicies.Count) Anti-Phishing policies" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishPolicies' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Anti-Phishing policies (none found)' -sev Debug
         }
         $AntiPhishPolicies = $null
 
         # Get Anti-Phishing rules
         $AntiPhishRules = New-ExoRequest -tenantid $TenantFilter -cmdlet 'Get-AntiPhishRule'
         if ($AntiPhishRules) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishRules' -Data $AntiPhishRules
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishRules' -Data $AntiPhishRules -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishRules' -Data $AntiPhishRules -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message "Cached $($AntiPhishRules.Count) Anti-Phishing rules" -sev Debug
+        } else {
+            # The cmdlet succeeded with nothing returned: write the authoritative empty set so the
+            # Count marker records a completed collection and stale rows are cleared.
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'ExoAntiPhishRules' -Data @() -AddCount -ClearOnEmpty
+            Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached 0 Anti-Phishing rules (none found)' -sev Debug
         }
         $AntiPhishRules = $null
 

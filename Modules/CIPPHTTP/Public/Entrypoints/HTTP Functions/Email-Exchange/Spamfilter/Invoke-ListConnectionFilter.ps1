@@ -4,6 +4,8 @@ function Invoke-ListConnectionFilter {
         Entrypoint
     .ROLE
         Exchange.ConnectionFilter.Read
+    .DESCRIPTION
+        Lists hosted connection filter policies (IP allow/block lists) in Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,7 +16,7 @@ function Invoke-ListConnectionFilter {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Policies = $ErrorMessage
     }
 

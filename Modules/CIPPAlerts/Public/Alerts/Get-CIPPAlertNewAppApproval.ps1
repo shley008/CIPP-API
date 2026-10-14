@@ -14,7 +14,7 @@ function Get-CIPPAlertNewAppApproval {
     )
 
     try {
-        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any (u:u/status eq 'InProgress')" -tenantid $TenantFilter
+        $Approvals = New-GraphGetRequest -Uri "https://graph.microsoft.com/beta/identityGovernance/appConsent/appConsentRequests?`$top=100&`$filter=userConsentRequests/any(u:u/status eq 'InProgress')" -tenantid $TenantFilter
 
         if ($Approvals.count -gt 0) {
             $TenantGUID = (Get-Tenants -TenantFilter $TenantFilter -SkipDomains).customerId
@@ -24,6 +24,13 @@ function Get-CIPPAlertNewAppApproval {
                 $userConsentRequests = New-GraphGetRequest -Uri "https://graph.microsoft.com/v1.0/identityGovernance/appConsent/appConsentRequests/$($App.id)/userConsentRequests" -tenantid $TenantFilter
 
                 $userConsentRequests | ForEach-Object {
+                    # Only alert on pending (InProgress) requests. The top-level appConsentRequests
+                    # filter matches an app when ANY of its userConsentRequests is InProgress, but
+                    # this per-app list returns ALL of them - including Completed, Denied and Expired
+                    # - so without this guard already-resolved requests were being alerted on.
+                    if ($_.status -ne 'InProgress') {
+                        return
+                    }
                     $consentUrl = if ($App.consentType -eq 'Static') {
                         # if something is going wrong here you've probably stumbled on a fourth variation - rvdwegen
                         "https://login.microsoftonline.com/$($TenantFilter)/adminConsent?client_id=$($App.appId)&bf_id=$($App.id)&redirect_uri=https://entra.microsoft.com/TokenAuthorize"
@@ -49,9 +56,9 @@ function Get-CIPPAlertNewAppApproval {
                     $AlertData.Add($Message)
                 }
             }
-
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
         }
+
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
     }
 }

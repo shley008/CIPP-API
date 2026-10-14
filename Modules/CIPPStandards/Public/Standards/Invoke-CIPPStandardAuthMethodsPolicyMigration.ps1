@@ -28,7 +28,7 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -74,9 +74,7 @@ function Invoke-CIPPStandardAuthMethodsPolicyMigration {
     }
 
     if ($Settings.report -eq $true) {
-        $migrationComplete = $CurrentInfo.policyMigrationState -eq 'migrationComplete' -or $null -eq $CurrentInfo.policyMigrationState
         Set-CIPPStandardsCompareField -FieldName 'standards.AuthMethodsPolicyMigration' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $tenant
-        Add-CIPPBPAField -FieldName 'AuthMethodsPolicyMigration' -FieldValue $migrationComplete -StoreAs bool -Tenant $tenant
     }
 
 }

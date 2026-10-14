@@ -24,16 +24,16 @@ function Invoke-CippTestCopilotReady005 {
         # Build lookup of readiness data keyed by UPN
         $ReadinessLookup = @{}
         if ($ReadinessData) {
-            foreach ($Entry in ($ReadinessData | Where-Object { $_.userPrincipalName })) {
+            foreach ($Entry in ($ReadinessData.Where({ $_.userPrincipalName }))) {
                 $ReadinessLookup[$Entry.userPrincipalName.ToLower()] = $Entry
             }
         }
 
         # Use licensed active users as the denominator — users absent from the report have never used M365
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
                 $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
+                $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+            }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady005' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'Medium' -Name 'Users are actively using Microsoft Teams' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
@@ -56,18 +56,18 @@ function Invoke-CippTestCopilotReady005 {
 
         if ($ActivityPercent -ge $ActivityThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** used Teams meetings or chat in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'These users are strong candidates for Copilot in Teams, which provides meeting summaries, chat recaps, and real-time meeting assistance.'
+            $Result = [System.Text.StringBuilder]::new("**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** used Teams meetings or chat in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('These users are strong candidates for Copilot in Teams, which provides meeting summaries, chat recaps, and real-time meeting assistance.')
         } else {
             $Status = 'Failed'
-            $Result = "Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** used Teams meetings or chat in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'Copilot for Teams delivers the most value to users who regularly use chat and meetings. '
-            $Result += "Consider driving Teams adoption before or alongside a Copilot rollout.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** used Teams meetings or chat in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('Copilot for Teams delivers the most value to users who regularly use chat and meetings. ')
+            $null = $Result.Append("Consider driving Teams adoption before or alongside a Copilot rollout.`n`n")
             if ($InactiveUsers.Count -gt 0 -and $InactiveUsers.Count -le 20) {
-                $Result += "**Inactive users (no Teams activity in 30 days):**`n"
-                foreach ($Upn in $InactiveUsers) { $Result += "- $Upn`n" }
+                $null = $Result.Append("**Inactive users (no Teams activity in 30 days):**`n")
+                foreach ($Upn in $InactiveUsers) { $null = $Result.Append("- $Upn`n") }
             } elseif ($InactiveUsers.Count -gt 20) {
-                $Result += "**$($InactiveUsers.Count) users** had no Teams meetings or chat activity in the past 30 days."
+                $null = $Result.Append("**$($InactiveUsers.Count) users** had no Teams meetings or chat activity in the past 30 days.")
             }
         }
 

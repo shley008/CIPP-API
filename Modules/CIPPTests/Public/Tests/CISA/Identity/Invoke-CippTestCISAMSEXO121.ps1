@@ -23,21 +23,21 @@ function Invoke-CippTestCISAMSEXO121 {
             return
         }
 
-        $AllowedSenders = $AllowBlockList | Where-Object { $_.Action -eq 'Allow' -and $_.ListType -eq 'Sender' }
+        $AllowedSenders = $AllowBlockList.Where({ $_.Action -eq 'Allow' -and $_.ListType -eq 'Sender' })
 
         if ($AllowedSenders.Count -eq 0) {
-            $Result = '✅ **Pass**: No allowed senders configured in tenant allow/block list.'
+            $Result = [System.Text.StringBuilder]::new('✅ **Pass**: No allowed senders configured in tenant allow/block list.')
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($AllowedSenders.Count) allowed sender(s) configured in tenant allow/block list"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($AllowedSenders.Count) allowed sender(s) configured in tenant allow/block list")
             if ($AllowedSenders.Count -gt 10) {
-                $Result += ' (showing first 10)'
+                $null = $Result.Append(' (showing first 10)')
             }
-            $Result += ":`n`n"
-            $Result += "| Value | Action | List Type |`n"
-            $Result += "| :---- | :----- | :-------- |`n"
-            foreach ($Sender in ($AllowedSenders | Select-Object -First 10)) {
-                $Result += "| $($Sender.Value) | $($Sender.Action) | $($Sender.ListType) |`n"
+            $null = $Result.Append(":`n`n")
+            $null = $Result.Append("| Value | Action | List Type |`n")
+            $null = $Result.Append("| :---- | :----- | :-------- |`n")
+            foreach ($AllowedSender in ($AllowedSenders.Where({ $true }, 'First', 10))) {
+                $null = $Result.Append("| $($AllowedSender.Value) | $($AllowedSender.Action) | $($AllowedSender.ListType) |`n")
             }
             $Status = 'Failed'
         }

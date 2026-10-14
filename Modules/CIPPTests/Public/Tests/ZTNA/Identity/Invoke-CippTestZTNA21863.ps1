@@ -16,17 +16,17 @@ function Invoke-CippTestZTNA21863 {
             return
         }
 
-        $UntriagedHighRiskSignIns = $RiskDetections | Where-Object { $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' }
+        $UntriagedHighRiskSignIns = $RiskDetections.Where({ $_.riskState -eq 'atRisk' -and $_.riskLevel -eq 'high' })
 
         $Passed = if ($UntriagedHighRiskSignIns.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = '✅ No untriaged risky sign ins in the tenant.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('✅ No untriaged risky sign ins in the tenant.')
         } else {
-            $ResultMarkdown = "❌ Found **$($UntriagedHighRiskSignIns.Count)** untriaged high-risk sign ins.`n`n"
-            $ResultMarkdown += "## Untriaged High-Risk Sign ins`n`n"
-            $ResultMarkdown += "| Date | User Principal Name | Type | Risk Level |`n"
-            $ResultMarkdown += "| :---- | :---- | :---- | :---- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Found **$($UntriagedHighRiskSignIns.Count)** untriaged high-risk sign ins.`n`n")
+            $null = $ResultMarkdown.Append("## Untriaged High-Risk Sign ins`n`n")
+            $null = $ResultMarkdown.Append("| Date | User Principal Name | Type | Risk Level |`n")
+            $null = $ResultMarkdown.Append("| :---- | :---- | :---- | :---- |`n")
 
             foreach ($Risk in $UntriagedHighRiskSignIns) {
                 $UserPrincipalName = $Risk.userPrincipalName
@@ -38,7 +38,7 @@ function Invoke-CippTestZTNA21863 {
                 }
                 $RiskEventType = $Risk.riskEventType
                 $RiskDate = $Risk.detectedDateTime
-                $ResultMarkdown += "| $RiskDate | $UserPrincipalName | $RiskEventType | $RiskLevel |`n"
+                $null = $ResultMarkdown.Append("| $RiskDate | $UserPrincipalName | $RiskEventType | $RiskLevel |`n")
             }
         }
 

@@ -4,6 +4,8 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         Entrypoint
     .ROLE
         Tenant.ConditionalAccess.Read
+    .DESCRIPTION
+        Lists audit log entries showing changes to a specific Conditional Access policy, including before/after values.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -27,7 +29,7 @@ Function Invoke-ListConditionalAccessPolicyChanges {
         }
         $StatusCode = [HttpStatusCode]::OK
     } catch {
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Changes = "Failed to request audit logs for policy $($PolicyDisplayName): $($_.Exception.message)"
     }
 

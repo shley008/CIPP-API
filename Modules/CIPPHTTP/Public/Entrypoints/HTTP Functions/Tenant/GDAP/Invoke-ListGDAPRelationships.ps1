@@ -4,6 +4,8 @@ function Invoke-ListGDAPRelationships {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Relationship.Read
+    .DESCRIPTION
+        Lists GDAP delegated admin relationships with customer tenants, with optional filtering by relationship ID or OData filter.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -34,7 +36,7 @@ function Invoke-ListGDAPRelationships {
         $ErrorContext = if ($Id) { "get GDAP relationship $Id" } else { 'list GDAP relationships' }
         Write-LogMessage -API $APIName -tenant $env:TenantID -headers $Request.Headers -message "Failed to $ErrorContext $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
         $Body = @{ Results = @(); Error = $ErrorMessage.NormalizedError }
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{

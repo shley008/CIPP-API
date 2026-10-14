@@ -13,11 +13,11 @@ function Invoke-CippTestZTNA21806 {
             return
         }
 
-        $matchedPolicies = $allCAPolicies | Where-Object {
+        $matchedPolicies = $allCAPolicies.Where({
             ($_.conditions.applications.includeUserActions -contains 'urn:user:registersecurityinfo') -and
             ($_.conditions.users.includeUsers -contains 'All') -and
             $_.state -eq 'enabled'
-        }
+        })
 
         $testResultMarkdown = ''
 
@@ -33,15 +33,15 @@ function Invoke-CippTestZTNA21806 {
         $tableRows = ''
 
         if ($matchedPolicies.Count -gt 0) {
-            $mdInfo = "`n## $reportTitle`n`n"
-            $mdInfo += "| Policy Name | User Actions Targeted | Grant Controls Applied |`n"
-            $mdInfo += "| :---------- | :-------------------- | :--------------------- |`n"
+            $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+            $null = $mdInfo.Append("| Policy Name | User Actions Targeted | Grant Controls Applied |`n")
+            $null = $mdInfo.Append("| :---------- | :-------------------- | :--------------------- |`n")
 
             foreach ($policy in $matchedPolicies) {
-                $mdInfo += "| $($policy.displayName) | $($policy.conditions.applications.includeUserActions) | $($policy.grantControls.builtInControls -join ', ') |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | $($policy.conditions.applications.includeUserActions) | $($policy.grantControls.builtInControls -join ', ') |`n")
             }
         } else {
-            $mdInfo = 'No Conditional Access policies targeting security information registration.'
+            $mdInfo = [System.Text.StringBuilder]::new('No Conditional Access policies targeting security information registration.')
         }
 
         $testResultMarkdown = $testResultMarkdown + $mdInfo

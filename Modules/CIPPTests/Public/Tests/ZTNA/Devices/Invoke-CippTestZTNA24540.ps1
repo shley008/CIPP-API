@@ -12,29 +12,28 @@ function Invoke-CippTestZTNA24540 {
             return
         }
 
-        $FirewallPolicies = $ConfigurationPolicies | Where-Object {
+        $FirewallPolicies = $ConfigurationPolicies.Where({
             $_.templateReference -and $_.templateReference.templateFamily -eq 'endpointSecurityFirewall'
-        }
+        })
 
         if ($FirewallPolicies.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA24540' -TestType 'Devices' -Status 'Failed' -ResultMarkdown 'No Windows Firewall configuration policies found' -Risk 'High' -Name 'Windows Firewall policies protect against unauthorized network access' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Device'
             return
         }
 
-        $AssignedPolicies = $FirewallPolicies | Where-Object {
+        $AssignedPolicies = $FirewallPolicies.Where({
             $_.assignments -and $_.assignments.Count -gt 0
-        }
+        })
 
         if ($AssignedPolicies.Count -gt 0) {
             $Status = 'Passed'
-            $ResultLines = @(
-                'At least one Windows Firewall policy is created and assigned to a group.'
-                ''
-                '**Windows Firewall Configuration Policies:**'
-                ''
-                '| Policy Name | Status | Assignment Count |'
-                '| :---------- | :----- | :--------------- |'
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add('At least one Windows Firewall policy is created and assigned to a group.')
+            $ResultLines.Add('')
+            $ResultLines.Add('**Windows Firewall Configuration Policies:**')
+            $ResultLines.Add('')
+            $ResultLines.Add('| Policy Name | Status | Assignment Count |')
+            $ResultLines.Add('| :---------- | :----- | :--------------- |')
 
             foreach ($Policy in $FirewallPolicies) {
                 $PolicyStatus = if ($Policy.assignments -and $Policy.assignments.Count -gt 0) {
@@ -43,21 +42,20 @@ function Invoke-CippTestZTNA24540 {
                     '❌ Not assigned'
                 }
                 $AssignmentCount = if ($Policy.assignments) { $Policy.assignments.Count } else { 0 }
-                $ResultLines += "| $($Policy.name) | $PolicyStatus | $AssignmentCount |"
+                $ResultLines.Add("| $($Policy.name) | $PolicyStatus | $AssignmentCount |")
             }
 
             $Result = $ResultLines -join "`n"
         } else {
             $Status = 'Failed'
-            $ResultLines = @(
-                'There are no firewall policies assigned to any groups.'
-                ''
-                '**Windows Firewall Configuration Policies (Unassigned):**'
-                ''
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add('There are no firewall policies assigned to any groups.')
+            $ResultLines.Add('')
+            $ResultLines.Add('**Windows Firewall Configuration Policies (Unassigned):**')
+            $ResultLines.Add('')
 
             foreach ($Policy in $FirewallPolicies) {
-                $ResultLines += "- $($Policy.name)"
+                $ResultLines.Add("- $($Policy.name)")
             }
 
             $Result = $ResultLines -join "`n"

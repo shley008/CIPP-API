@@ -17,19 +17,19 @@ function Invoke-CippTestZTNA21799 {
         $matchedPolicies = $null
 
         if (($authMethodPolicy.authenticationMethodConfigurations.state -eq 'enabled').count -gt 0) {
-            $matchedPolicies = $allCAPolicies | Where-Object {
+            $matchedPolicies = $allCAPolicies.Where({
                 $_.conditions.signInRiskLevels -eq 'high' -and
                 ($_.conditions.users.includeUsers -contains 'All') -and
                 ($_.grantControls.builtInControls -contains 'block' -or $_.grantControls.builtInControls -contains 'mfa' -or $null -ne $_.grantControls.authenticationStrength) -and
                 ($_.state -eq 'enabled')
-            }
+            })
         } else {
-            $matchedPolicies = $allCAPolicies | Where-Object {
+            $matchedPolicies = $allCAPolicies.Where({
                 $_.conditions.signInRiskLevels -eq 'high' -and
                 ($_.conditions.users.includeUsers -contains 'All') -and
                 ($_.grantControls.builtInControls -contains 'block') -and
                 ($_.state -eq 'enabled')
-            }
+            })
         }
 
         $testResultMarkdown = ''
@@ -46,9 +46,9 @@ function Invoke-CippTestZTNA21799 {
         $tableRows = ''
 
         if ($matchedPolicies.Count -gt 0) {
-            $mdInfo = "`n## $reportTitle`n`n"
-            $mdInfo += "| Policy Name | Grant Controls | Target Users |`n"
-            $mdInfo += "| :---------- | :------------- | :----------- |`n"
+            $mdInfo = [System.Text.StringBuilder]::new("`n## $reportTitle`n`n")
+            $null = $mdInfo.Append("| Policy Name | Grant Controls | Target Users |`n")
+            $null = $mdInfo.Append("| :---------- | :------------- | :----------- |`n")
 
             foreach ($policy in $matchedPolicies) {
                 $grantControls = switch ($policy.grantControls) {
@@ -69,7 +69,7 @@ function Invoke-CippTestZTNA21799 {
                     $policy.conditions.users.includeUsers -join ', '
                 }
 
-                $mdInfo += "| $($policy.displayName) | $grantControls | $targetUsers |`n"
+                $null = $mdInfo.Append("| $($policy.displayName) | $grantControls | $targetUsers |`n")
             }
         }
         $testResultMarkdown = $testResultMarkdown + $mdInfo

@@ -62,6 +62,7 @@ function Push-DomainAnalyserDomain {
         MSCNAMEDKIMSelectors   = ''
         EnterpriseEnrollment   = ''
         EnterpriseRegistration = ''
+        AutoDiscover           = ''
         Score                  = ''
         MaximumScore           = 160
         ScorePercentage        = ''
@@ -225,7 +226,7 @@ function Push-DomainAnalyserDomain {
         if ($Domain -match 'onmicrosoft.com' -and $Domain -notmatch 'mail.onmicrosoft.com') {
             $DKIMSelector1Value = "selector1-$($Domain -replace '\.', '-' )"
             $DKIMSelector2Value = "selector2-$($Domain -replace '\.', '-' )"
-            $DkimParams.Add('Selectors', @("$DKIMSelector1Value", "$DKIMSelector2Value"))
+            $DkimParams.Selectors = @("$DKIMSelector1Value", "$DKIMSelector2Value")
         }
 
         $DkimRecord = Read-DkimRecord @DkimParams -ErrorAction Stop
@@ -240,6 +241,18 @@ function Push-DomainAnalyserDomain {
         } else {
             $Result.DKIMEnabled = $false
             $ScoreExplanation.Add('DKIM Not Configured') | Out-Null
+        }
+
+        # Persist the selectors the analyser just discovered so GetDkimSelectors reads them from the
+        # Domains table instead of returning nothing (mirrors how Invoke-ListDomainHealth/ExecDnsConfig store them).
+        $DiscoveredSelectors = @($DkimRecord.Selectors | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }) | Sort-Object -Unique
+        if ($DiscoveredSelectors.Count -gt 0) {
+            $DkimSelectorsJson = [string]($DiscoveredSelectors | ConvertTo-Json -Compress)
+            if ($DomainObject.PSObject.Properties.Name -notcontains 'DkimSelectors') {
+                $DomainObject | Add-Member -MemberType NoteProperty -Name DkimSelectors -Value $DkimSelectorsJson -Force
+            } else {
+                $DomainObject.DkimSelectors = $DkimSelectorsJson
+            }
         }
     } catch {
         $Message = 'DKIM Exception'
@@ -292,6 +305,26 @@ function Push-DomainAnalyserDomain {
         Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "Enterprise Registration CNAME error for $Domain" -LogData (Get-CippException -Exception $_) -sev Error
     }
     #EndRegion Intune Enrollment CNAME Check
+
+    #Region AutoDiscover Check
+    try {
+        $AutoDiscoverRecord = Read-AutoDiscoverRecord -Domain $Domain
+        $AutoDiscoverFailCount = $AutoDiscoverRecord.ValidationFails | Measure-Object | Select-Object -ExpandProperty Count
+        $AutoDiscoverWarnCount = $AutoDiscoverRecord.ValidationWarns | Measure-Object | Select-Object -ExpandProperty Count
+        if ($AutoDiscoverFailCount -eq 0 -and $AutoDiscoverWarnCount -eq 0) {
+            $Result.AutoDiscover = 'Correct'
+        } elseif ($AutoDiscoverFailCount -eq 0) {
+            $Result.AutoDiscover = "$($AutoDiscoverRecord.RecordType): $($AutoDiscoverRecord.Record)"
+            $ScoreExplanation.Add("AutoDiscover $($AutoDiscoverRecord.RecordType) record points to unexpected target") | Out-Null
+        } else {
+            $Result.AutoDiscover = 'No Record'
+            $ScoreExplanation.Add('No AutoDiscover DNS record found') | Out-Null
+        }
+    } catch {
+        $Result.AutoDiscover = 'Error'
+        Write-LogMessage -API 'DomainAnalyser' -tenant $DomainObject.TenantId -message "AutoDiscover check error for $Domain" -LogData (Get-CippException -Exception $_) -sev Error
+    }
+    #EndRegion AutoDiscover Check
 
     #Region MSCNAME DKIM Records
     # Get Microsoft DKIM CNAME selector Records

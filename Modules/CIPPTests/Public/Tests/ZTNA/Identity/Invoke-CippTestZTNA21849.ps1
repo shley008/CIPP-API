@@ -10,44 +10,44 @@ function Invoke-CippTestZTNA21849 {
     try {
         # Get password rule settings from Settings cache
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-        $PasswordRuleSettings = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' }
+        $PasswordRuleSettings = foreach ($Setting in $Settings) { if ($Setting.displayName -eq 'Password Rule Settings') { $Setting } }
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
         if ($null -eq $PasswordRuleSettings) {
             # Default is 60 seconds
             $Passed = 'Passed'
-            $ResultMarkdown = "✅ Smart Lockout duration is configured to 60 seconds or higher (default).`n`n"
-            $ResultMarkdown += "## [Smart Lockout Settings]($PortalLink)`n`n"
-            $ResultMarkdown += "| Setting | Value |`n"
-            $ResultMarkdown += "| :---- | :---- |`n"
-            $ResultMarkdown += "| Lockout Duration (seconds) | 60 (Default) |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart Lockout duration is configured to 60 seconds or higher (default).`n`n")
+            $null = $ResultMarkdown.Append("## [Smart Lockout Settings]($PortalLink)`n`n")
+            $null = $ResultMarkdown.Append("| Setting | Value |`n")
+            $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+            $null = $ResultMarkdown.Append("| Lockout Duration (seconds) | 60 (Default) |`n")
         } else {
-            $LockoutDurationSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutDurationInSeconds' }
+            $LockoutDurationSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutDurationInSeconds') { $Value } }
 
             if ($null -eq $LockoutDurationSetting) {
                 # Default is 60 seconds
                 $Passed = 'Passed'
-                $ResultMarkdown = "✅ Smart Lockout duration is configured to 60 seconds or higher (default).`n`n"
-                $ResultMarkdown += "## [Smart Lockout Settings]($PortalLink)`n`n"
-                $ResultMarkdown += "| Setting | Value |`n"
-                $ResultMarkdown += "| :---- | :---- |`n"
-                $ResultMarkdown += "| Lockout Duration (seconds) | 60 (Default) |`n"
+                $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart Lockout duration is configured to 60 seconds or higher (default).`n`n")
+                $null = $ResultMarkdown.Append("## [Smart Lockout Settings]($PortalLink)`n`n")
+                $null = $ResultMarkdown.Append("| Setting | Value |`n")
+                $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+                $null = $ResultMarkdown.Append("| Lockout Duration (seconds) | 60 (Default) |`n")
             } else {
                 $LockoutDuration = [int]$LockoutDurationSetting.value
 
                 if ($LockoutDuration -ge 60) {
                     $Passed = 'Passed'
-                    $ResultMarkdown = "✅ Smart Lockout duration is configured to 60 seconds or higher.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart Lockout duration is configured to 60 seconds or higher.`n`n")
                 } else {
                     $Passed = 'Failed'
-                    $ResultMarkdown = "❌ Smart Lockout duration is configured below 60 seconds.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Smart Lockout duration is configured below 60 seconds.`n`n")
                 }
 
-                $ResultMarkdown += "## [Smart Lockout Settings]($PortalLink)`n`n"
-                $ResultMarkdown += "| Setting | Value |`n"
-                $ResultMarkdown += "| :---- | :---- |`n"
-                $ResultMarkdown += "| Lockout Duration (seconds) | $LockoutDuration |`n"
+                $null = $ResultMarkdown.Append("## [Smart Lockout Settings]($PortalLink)`n`n")
+                $null = $ResultMarkdown.Append("| Setting | Value |`n")
+                $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+                $null = $ResultMarkdown.Append("| Lockout Duration (seconds) | $LockoutDuration |`n")
             }
         }
 

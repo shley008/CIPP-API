@@ -1,7 +1,7 @@
 function Invoke-AddCustomScript {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.Tests.ReadWrite
     #>
@@ -18,6 +18,7 @@ function Invoke-AddCustomScript {
 
         if ($Action) {
             if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ScriptGuid is required for action operations'
             }
 
@@ -25,15 +26,18 @@ function Invoke-AddCustomScript {
             $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
             $ExistingVersions = @(Get-CIPPAzDataTableEntity @Table -Filter $Filter)
             if (-not $ExistingVersions -or $ExistingVersions.Count -eq 0) {
+                $FailCode = [HttpStatusCode]::NotFound
                 throw "Script with GUID '$ScriptGuid' not found"
             }
 
             $LatestVersion = $ExistingVersions | Sort-Object -Property Version -Descending | Select-Object -First 1
             $CurrentEnabled = if ($LatestVersion.PSObject.Properties['Enabled']) { [bool]$LatestVersion.Enabled } else { $true }
             $CurrentAlertOnFailure = if ($LatestVersion.PSObject.Properties['AlertOnFailure']) { [bool]$LatestVersion.AlertOnFailure } else { $false }
+            $CurrentResultMode = if ($LatestVersion.PSObject.Properties['ResultMode'] -and -not [string]::IsNullOrWhiteSpace($LatestVersion.ResultMode)) { $LatestVersion.ResultMode } else { 'Auto' }
 
             $NewEnabled = $CurrentEnabled
             $NewAlertOnFailure = $CurrentAlertOnFailure
+            $NewResultMode = $CurrentResultMode
 
             switch ($Action) {
                 'EnableScript' {
@@ -48,6 +52,15 @@ function Invoke-AddCustomScript {
                 'DisableAlerts' {
                     $NewAlertOnFailure = $false
                 }
+                'SetResultMode' {
+                    $RequestedMode = $Request.Body.ResultMode
+                    $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo', 'AlwaysInvestigate')
+                    if ([string]::IsNullOrWhiteSpace($RequestedMode) -or $RequestedMode -notin $ValidResultModes) {
+                        $FailCode = [HttpStatusCode]::BadRequest
+                        throw "ResultMode must be one of: $($ValidResultModes -join ', ')"
+                    }
+                    $NewResultMode = $RequestedMode
+                }
             }
 
             $MergeEntity = @{
@@ -55,10 +68,11 @@ function Invoke-AddCustomScript {
                 RowKey         = $LatestVersion.RowKey
                 Enabled        = $NewEnabled
                 AlertOnFailure = $NewAlertOnFailure
+                ResultMode     = $NewResultMode
             }
 
             Add-CIPPAzDataTableEntity @Table -Entity $MergeEntity -OperationType UpsertMerge
-            Write-LogMessage -API $APIName -headers $Headers -message "Updated custom script '$($LatestVersion.ScriptName)' via action '$Action', Enabled: $NewEnabled, AlertOnFailure: $NewAlertOnFailure)" -sev 'Info'
+            Write-LogMessage -API $APIName -headers $Headers -message "Updated custom script '$($LatestVersion.ScriptName)' via action '$Action', Enabled: $NewEnabled, AlertOnFailure: $NewAlertOnFailure, ResultMode: $NewResultMode)" -sev 'Info'
 
             $Body = @{
                 Results = "Successfully updated custom script '$($LatestVersion.ScriptName)'"
@@ -69,6 +83,7 @@ function Invoke-AddCustomScript {
 
         elseif ($RestoreToVersion) {
             if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ScriptGuid is required for restore operation'
             }
 
@@ -78,12 +93,13 @@ function Invoke-AddCustomScript {
 
             $TargetScript = $ExistingScripts | Where-Object { $_.Version -eq $RestoreToVersion }
             if (-not $TargetScript) {
+                $FailCode = [HttpStatusCode]::NotFound
                 throw "Version $RestoreToVersion not found for script GUID '$ScriptGuid'"
             }
 
             $NewerVersions = $ExistingScripts | Where-Object { $_.Version -gt $RestoreToVersion }
             foreach ($script in $NewerVersions) {
-                Remove-AzDataTableEntity @Table -Entity $script
+                Remove-CIPPAzDataTableEntity @Table -Entity $script
             }
 
             Write-LogMessage -API $APIName -headers $Headers -message "Restored custom script: $($TargetScript.ScriptName) to version $RestoreToVersion (Deleted $($NewerVersions.Count) newer version(s))" -sev 'Info'
@@ -104,50 +120,71 @@ function Invoke-AddCustomScript {
             $UserImpact = $Request.Body.UserImpact
             $Enabled = $Request.Body.Enabled
             $AlertOnFailure = $Request.Body.AlertOnFailure
+            $AlertStatuses = $Request.Body.AlertStatuses
             $ReturnType = $Request.Body.ReturnType
             $MarkdownTemplate = $Request.Body.MarkdownTemplate
             $ResultSchema = $Request.Body.ResultSchema
+            $ResultMode = $Request.Body.ResultMode
 
             if ([string]::IsNullOrWhiteSpace($ReturnType)) {
                 $ReturnType = 'JSON'
             }
 
+            if ([string]::IsNullOrWhiteSpace($ResultMode)) {
+                $ResultMode = 'Auto'
+            }
+
             if ([string]::IsNullOrWhiteSpace($ScriptName)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ScriptName is required'
             }
 
             if ([string]::IsNullOrWhiteSpace($Pillar)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'Pillar is required'
             }
 
             if ([string]::IsNullOrWhiteSpace($UserImpact)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'UserImpact is required'
             }
 
             if ([string]::IsNullOrWhiteSpace($ImplementationEffort)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ImplementationEffort is required'
             }
 
             $ValidReturnTypes = @('JSON', 'Markdown')
             if ($ReturnType -notin $ValidReturnTypes) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw "ReturnType must be one of: $($ValidReturnTypes -join ', ')"
+            }
+
+            $ValidResultModes = @('Auto', 'AlwaysPass', 'AlwaysInfo', 'AlwaysInvestigate')
+            if ($ResultMode -notin $ValidResultModes) {
+                $FailCode = [HttpStatusCode]::BadRequest
+                throw "ResultMode must be one of: $($ValidResultModes -join ', ')"
             }
 
             $ValidPillars = @('Identity', 'Devices', 'Data')
             if ($Pillar -notin $ValidPillars) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw "Pillar must be one of: $($ValidPillars -join ', ')"
             }
 
             $ValidImpactAndEffort = @('Low', 'Medium', 'High')
             if ($UserImpact -notin $ValidImpactAndEffort) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw "UserImpact must be one of: $($ValidImpactAndEffort -join ', ')"
             }
 
             if ($ImplementationEffort -notin $ValidImpactAndEffort) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw "ImplementationEffort must be one of: $($ValidImpactAndEffort -join ', ')"
             }
 
             if ($ScriptName -notmatch '^[a-zA-Z0-9\s\-_]+$') {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ScriptName can only contain letters, numbers, spaces, hyphens, and underscores. Spaces are allowed but may affect command-line usage.'
             }
 
@@ -157,6 +194,7 @@ function Invoke-AddCustomScript {
                 $Filter = "PartitionKey eq 'CustomScript' and ScriptGuid eq '{0}'" -f $ScriptGuid
                 $ExistingVersions = Get-CIPPAzDataTableEntity @Table -Filter $Filter
                 if (-not $ExistingVersions) {
+                    $FailCode = [HttpStatusCode]::NotFound
                     throw "Script with GUID '$ScriptGuid' not found"
                 }
 
@@ -176,6 +214,7 @@ function Invoke-AddCustomScript {
             }
 
             if ([string]::IsNullOrWhiteSpace($ScriptContent)) {
+                $FailCode = [HttpStatusCode]::BadRequest
                 throw 'ScriptContent is required'
             }
 
@@ -183,7 +222,7 @@ function Invoke-AddCustomScript {
                 $ResultSchema = ''
             }
 
-            Test-CustomScriptSecurity -ScriptContent $ScriptContent
+            try { Test-CustomScriptSecurity -ScriptContent $ScriptContent } catch { $FailCode = [HttpStatusCode]::BadRequest; throw }
 
             $RowKey = '{0}-v{1}' -f $ScriptGuid, $Version
             $Entity = @{
@@ -201,9 +240,11 @@ function Invoke-AddCustomScript {
                 UserImpact           = $UserImpact
                 Enabled              = $Enabled
                 AlertOnFailure       = $AlertOnFailure
+                AlertStatuses        = $AlertStatuses
                 ReturnType           = $ReturnType
                 MarkdownTemplate     = $MarkdownTemplate
                 ResultSchema         = $ResultSchema
+                ResultMode           = $ResultMode
                 CreatedBy            = if ($Headers) { ([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Headers.'x-ms-client-principal')) | ConvertFrom-Json).userDetails } else { 'Unknown' }
                 CreatedDate          = (Get-Date).ToUniversalTime().ToString('o')
             }
@@ -222,7 +263,7 @@ function Invoke-AddCustomScript {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -headers $Headers -message "Failed to create custom script: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 

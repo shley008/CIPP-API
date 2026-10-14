@@ -4,6 +4,8 @@ Function Invoke-ListSpamfilter {
         Entrypoint
     .ROLE
         Exchange.SpamFilter.Read
+    .DESCRIPTION
+        Lists hosted content filter (anti-spam) policies and their rule states in Exchange Online Protection.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-ListSpamfilter {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
 

@@ -30,7 +30,7 @@ function Invoke-CIPPStandardlaps {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -71,6 +71,5 @@ function Invoke-CIPPStandardlaps {
     if ($Settings.report -eq $true) {
         $state = $PreviousSetting.localAdminPassword.isEnabled ? $true : $false
         Set-CIPPStandardsCompareField -FieldName 'standards.laps' -FieldValue $state -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'laps' -FieldValue $PreviousSetting.localAdminPassword.isEnabled -StoreAs bool -Tenant $tenant
     }
 }

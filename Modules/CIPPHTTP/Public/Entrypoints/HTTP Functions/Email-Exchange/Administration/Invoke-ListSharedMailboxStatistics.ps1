@@ -4,6 +4,8 @@ Function Invoke-ListSharedMailboxStatistics {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists shared mailboxes and their usage statistics for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -22,7 +24,7 @@ Function Invoke-ListSharedMailboxStatistics {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

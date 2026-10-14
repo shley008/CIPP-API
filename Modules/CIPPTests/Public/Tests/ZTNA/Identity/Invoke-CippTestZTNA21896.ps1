@@ -13,12 +13,12 @@ function Invoke-CippTestZTNA21896 {
         }
 
         $MicrosoftOwnerId = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'
-        $SPsWithPassCreds = $ServicePrincipals | Where-Object {
+        $SPsWithPassCreds = $ServicePrincipals.Where({
             $_.passwordCredentials -and $_.passwordCredentials.Count -gt 0 -and $_.appOwnerOrganizationId -ne $MicrosoftOwnerId
-        }
-        $SPsWithKeyCreds = $ServicePrincipals | Where-Object {
+        })
+        $SPsWithKeyCreds = $ServicePrincipals.Where({
             $_.keyCredentials -and $_.keyCredentials.Count -gt 0 -and $_.appOwnerOrganizationId -ne $MicrosoftOwnerId
-        }
+        })
 
         if (-not $SPsWithPassCreds -and -not $SPsWithKeyCreds) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'ZTNA21896' -TestType 'Identity' -Status 'Passed' -ResultMarkdown 'Service principals do not have credentials associated with them' -Risk 'Medium' -Name 'Service principals do not have certificates or credentials associated with them' -UserImpact 'Low' -ImplementationEffort 'Medium' -Category 'Application management'
@@ -28,25 +28,24 @@ function Invoke-CippTestZTNA21896 {
         $TotalWithCreds = $SPsWithPassCreds.Count + $SPsWithKeyCreds.Count
         $Status = 'Investigate'
 
-        $ResultLines = @(
-            "Found $TotalWithCreds service principal(s) with credentials configured in the tenant, which represents a security risk."
-            ''
-        )
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        $ResultLines.Add("Found $TotalWithCreds service principal(s) with credentials configured in the tenant, which represents a security risk.")
+        $ResultLines.Add('')
 
         if ($SPsWithPassCreds.Count -gt 0) {
-            $ResultLines += "**Service principals with password credentials:** $($SPsWithPassCreds.Count)"
-            $ResultLines += ''
+            $ResultLines.Add("**Service principals with password credentials:** $($SPsWithPassCreds.Count)")
+            $ResultLines.Add('')
         }
 
         if ($SPsWithKeyCreds.Count -gt 0) {
-            $ResultLines += "**Service principals with key credentials (certificates):** $($SPsWithKeyCreds.Count)"
-            $ResultLines += ''
+            $ResultLines.Add("**Service principals with key credentials (certificates):** $($SPsWithKeyCreds.Count)")
+            $ResultLines.Add('')
         }
 
-        $ResultLines += '**Security implications:**'
-        $ResultLines += '- Service principals with credentials can be compromised if not properly secured'
-        $ResultLines += '- Password credentials are less secure than managed identities or certificate-based authentication'
-        $ResultLines += '- Consider using managed identities where possible to eliminate credential management'
+        $ResultLines.Add('**Security implications:**')
+        $ResultLines.Add('- Service principals with credentials can be compromised if not properly secured')
+        $ResultLines.Add('- Password credentials are less secure than managed identities or certificate-based authentication')
+        $ResultLines.Add('- Consider using managed identities where possible to eliminate credential management')
 
         $Result = $ResultLines -join "`n"
 

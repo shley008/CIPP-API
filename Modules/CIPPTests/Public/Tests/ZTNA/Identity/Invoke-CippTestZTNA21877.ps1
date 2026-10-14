@@ -17,7 +17,7 @@ function Invoke-CippTestZTNA21877 {
             return
         }
 
-        $GuestsWithoutSponsors = $Guests | Where-Object { -not $_.sponsors -or $_.sponsors.Count -eq 0 }
+        $GuestsWithoutSponsors = $Guests.Where({ -not $_.sponsors -or $_.sponsors.Count -eq 0 })
 
         if ($GuestsWithoutSponsors.Count -eq 0) {
             $Status = 'Passed'
@@ -25,27 +25,26 @@ function Invoke-CippTestZTNA21877 {
         } else {
             $Status = 'Failed'
 
-            $ResultLines = @(
-                "Found $($GuestsWithoutSponsors.Count) guest user(s) without sponsors out of $($Guests.Count) total guests."
-                ''
-                "**Total guests:** $($Guests.Count)"
-                "**Guests without sponsors:** $($GuestsWithoutSponsors.Count)"
-                "**Guests with sponsors:** $($Guests.Count - $GuestsWithoutSponsors.Count)"
-                ''
-                '**Top 10 guests without sponsors:**'
-            )
+            $ResultLines = [System.Collections.Generic.List[string]]::new()
+            $ResultLines.Add("Found $($GuestsWithoutSponsors.Count) guest user(s) without sponsors out of $($Guests.Count) total guests.")
+            $ResultLines.Add('')
+            $ResultLines.Add("**Total guests:** $($Guests.Count)")
+            $ResultLines.Add("**Guests without sponsors:** $($GuestsWithoutSponsors.Count)")
+            $ResultLines.Add("**Guests with sponsors:** $($Guests.Count - $GuestsWithoutSponsors.Count)")
+            $ResultLines.Add('')
+            $ResultLines.Add('**Top 10 guests without sponsors:**')
 
-            $Top10Guests = $GuestsWithoutSponsors | Select-Object -First 10
+            $Top10Guests = $GuestsWithoutSponsors.Where({ $true }, 'First', 10)
             foreach ($Guest in $Top10Guests) {
-                $ResultLines += "- $($Guest.displayName) ($($Guest.userPrincipalName))"
+                $ResultLines.Add("- $($Guest.displayName) ($($Guest.userPrincipalName))")
             }
 
             if ($GuestsWithoutSponsors.Count -gt 10) {
-                $ResultLines += "- ... and $($GuestsWithoutSponsors.Count - 10) more guest(s)"
+                $ResultLines.Add("- ... and $($GuestsWithoutSponsors.Count - 10) more guest(s)")
             }
 
-            $ResultLines += ''
-            $ResultLines += '**Recommendation:** Assign sponsors to all guest accounts for better accountability and lifecycle management.'
+            $ResultLines.Add('')
+            $ResultLines.Add('**Recommendation:** Assign sponsors to all guest accounts for better accountability and lifecycle management.')
 
             $Result = $ResultLines -join "`n"
         }

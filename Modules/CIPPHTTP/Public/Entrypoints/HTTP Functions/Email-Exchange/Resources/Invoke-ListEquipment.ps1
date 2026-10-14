@@ -4,6 +4,8 @@ function Invoke-ListEquipment {
         Entrypoint
     .ROLE
         Exchange.Equipment.Read
+    .DESCRIPTION
+        Lists equipment mailboxes (projectors, vehicles, etc.) in Exchange Online for a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -79,7 +81,7 @@ function Invoke-ListEquipment {
 
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Results = $ErrorMessage
     }
 

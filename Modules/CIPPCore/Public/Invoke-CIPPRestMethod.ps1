@@ -90,10 +90,12 @@ function Invoke-CIPPRestMethod {
 
     # ------------------------------------------------------------------
     # Escape hatch — env var kill switch, missing pooled client type,
-    # or per-call legacy switch
+    # per-call legacy switch, or binary body (byte[] cannot be
+    # serialised to string for the pooled C# client)
     # ------------------------------------------------------------------
     $HasCippRestClient = $null -ne ('CIPP.CIPPRestClient' -as [type])
-    if ($UseLegacyInvokeRestMethod -or $env:DisableCIPPRestMethod -eq 'true' -or -not $HasCippRestClient) {
+    $IsBinaryBody = $Body -is [byte[]]
+    if ($UseLegacyInvokeRestMethod -or [System.Environment]::GetEnvironmentVariable('DisableCIPPRestMethod') -eq 'true' -or -not $HasCippRestClient -or $IsBinaryBody) {
         $LegacyParams = @{
             Uri         = $Uri
             Method      = $Method
@@ -241,7 +243,7 @@ function Invoke-CIPPRestMethod {
     # ------------------------------------------------------------------
     if (-not $SkipHttpErrorCheck -and -not $Result.IsSuccess) {
         $ErrorMessage = "Response status code does not indicate success: $($Result.StatusCode)"
-        $Exception = [System.Net.Http.HttpRequestException]::new($ErrorMessage)
+        $Exception = [CIPP.CIPPHttpRequestException]::new($ErrorMessage, [int]$Result.StatusCode, $Result.ResponseHeaders, $Result.Content)
         $ErrorRecord = [System.Management.Automation.ErrorRecord]::new($Exception, 'WebCmdletWebResponseException', [System.Management.Automation.ErrorCategory]::InvalidOperation, $Uri)
         if (-not [string]::IsNullOrWhiteSpace($Result.Content)) {
             $ErrorRecord.ErrorDetails = [System.Management.Automation.ErrorDetails]::new($Result.Content)
@@ -254,13 +256,13 @@ function Invoke-CIPPRestMethod {
     # Return — deserialize JSON or return raw string
     # Empty body → null (matches Invoke-RestMethod on 204 No Content etc.)
     # ------------------------------------------------------------------
-    if ([string]::IsNullOrWhiteSpace($Result.Content)) {
+    if (-not $Result.HasContent) {
         return $null
     }
 
     if ($Result.IsJson) {
         try {
-            return $Result.Content | ConvertFrom-Json -Depth 100
+            return [CIPP.CippJson]::ConvertFromResponse($Result)
         } catch {
             # Malformed JSON — return raw so callers can handle it
             return $Result.Content

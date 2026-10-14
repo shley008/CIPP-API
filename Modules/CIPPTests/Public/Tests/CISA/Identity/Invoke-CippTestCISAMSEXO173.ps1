@@ -23,17 +23,17 @@ function Invoke-CippTestCISAMSEXO173 {
             return
         }
 
-        $AuditConfigObject = $AuditConfig | Select-Object -First 1
+        $AuditConfigObject = @($AuditConfig)[0]
 
         if ($AuditConfigObject.AdminAuditLogEnabled -eq $true) {
-            $Result = "✅ **Pass**: Admin audit log is enabled (provides 1 year retention).`n`n"
-            $Result += "**Current Settings:**`n"
-            $Result += "- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)"
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: Admin audit log is enabled (provides 1 year retention).`n`n")
+            $null = $Result.Append("**Current Settings:**`n")
+            $null = $Result.Append("- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: Admin audit log is not enabled.`n`n"
-            $Result += "**Current Settings:**`n"
-            $Result += "- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: Admin audit log is not enabled.`n`n")
+            $null = $Result.Append("**Current Settings:**`n")
+            $null = $Result.Append("- AdminAuditLogEnabled: $($AuditConfigObject.AdminAuditLogEnabled)")
             $Status = 'Failed'
         }
 

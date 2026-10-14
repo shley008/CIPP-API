@@ -19,14 +19,13 @@ function Set-CIPPDBCacheCopilotUserCountSummary {
     try {
         Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Caching Copilot user count summary' -sev Debug
 
-        $Data = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUserCountSummary(period='D30')" -tenantid $TenantFilter -AsApp $true
+        $Data = Get-CIPPCopilotReport -UriTemplate "https://graph.microsoft.com/beta/reports/getMicrosoft365CopilotUserCountSummary(period='{0}')" -TenantFilter $TenantFilter -AsApp $true
 
         if ($Data) {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountSummary' -Data $Data
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountSummary' -Data $Data -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountSummary' -Data $Data -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Cached Copilot user count summary' -sev Debug
         } else {
-            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountSummary' -Data @() -Count
+            Add-CIPPDbItem -TenantFilter $TenantFilter -Type 'CopilotUserCountSummary' -Data @() -AddCount
             Write-LogMessage -API 'CIPPDBCache' -tenant $TenantFilter -message 'Copilot user count summary: no records returned (no active Copilot usage)' -sev Debug
         }
 

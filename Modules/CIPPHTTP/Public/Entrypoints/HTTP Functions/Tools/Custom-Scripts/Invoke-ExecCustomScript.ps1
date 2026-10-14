@@ -16,10 +16,12 @@ function Invoke-ExecCustomScript {
         $Parameters = $Request.Body.Parameters ?? @{}
 
         if ([string]::IsNullOrWhiteSpace($ScriptGuid)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'ScriptGuid is required'
         }
 
         if ([string]::IsNullOrWhiteSpace($TenantFilter)) {
+            $FailCode = [HttpStatusCode]::BadRequest
             throw 'TenantFilter is required'
         }
 
@@ -28,16 +30,32 @@ function Invoke-ExecCustomScript {
         # Execute script (lookup happens inside New-CippCustomScriptExecution)
         $Result = New-CippCustomScriptExecution -ScriptGuid $ScriptGuid -TenantFilter $TenantFilter -Parameters $Parameters
 
+        # Extract wrapper properties if present
+        $CIPPResultMarkdown = $null
+        $CIPPStatus = $null
+        $ResultData = $Result
+        if ($Result -is [hashtable] -and $Result.ContainsKey('CIPPStatus')) {
+            $CIPPStatus = $Result['CIPPStatus']
+            $ResultData = if ($Result.ContainsKey('CIPPResults')) { $Result['CIPPResults'] } else { $null }
+            $CIPPResultMarkdown = if ($Result.ContainsKey('CIPPResultMarkdown')) { $Result['CIPPResultMarkdown'] } else { $null }
+        } elseif ($Result -is [PSCustomObject] -and $Result.PSObject.Properties['CIPPStatus']) {
+            $CIPPStatus = $Result.CIPPStatus
+            $ResultData = if ($Result.PSObject.Properties['CIPPResults']) { $Result.CIPPResults } else { $null }
+            $CIPPResultMarkdown = if ($Result.PSObject.Properties['CIPPResultMarkdown']) { $Result.CIPPResultMarkdown } else { $null }
+        }
+
         $Body = @{
-            Results     = $Result
-            ScriptGuid  = $ScriptGuid
-            Tenant      = $TenantFilter
+            Results            = $ResultData
+            ScriptGuid         = $ScriptGuid
+            Tenant             = $TenantFilter
+            CIPPStatus         = $CIPPStatus
+            CIPPResultMarkdown = $CIPPResultMarkdown
         }
 
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -tenant $TenantFilter -user $Request.Headers.'x-ms-client-principal-name' -message "Failed to execute custom script: $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = $FailCode ?? (Get-CippErrorStatusCode -ErrorRecord $_)
         $Body = @{
             Error = $ErrorMessage.NormalizedError
             Tenant = $TenantFilter

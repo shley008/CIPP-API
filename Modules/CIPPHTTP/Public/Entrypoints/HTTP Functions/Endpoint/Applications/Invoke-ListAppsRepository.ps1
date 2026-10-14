@@ -4,6 +4,8 @@ Function Invoke-ListAppsRepository {
         Entrypoint,AnyTenant
     .ROLE
         Endpoint.Application.Read
+    .DESCRIPTION
+        Searches external application repositories (WinGet, Chocolatey, etc.) for available application packages.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -12,6 +14,7 @@ Function Invoke-ListAppsRepository {
     $Packages = @()
     $Message = ''
     $IsError = $false
+    $StatusCode = [HttpStatusCode]::OK
 
     try {
         if (!([string]::IsNullOrEmpty($Search))) {
@@ -44,10 +47,12 @@ Function Invoke-ListAppsRepository {
         } else {
             $IsError = $true
             $Message = 'No search terms specified'
+            $StatusCode = [HttpStatusCode]::BadRequest
         }
     } catch {
         $IsError = $true
         $Message = "Repository error: $($_.Exception.Message)"
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     $PackageSearch = @{
@@ -58,7 +63,7 @@ Function Invoke-ListAppsRepository {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $PackageSearch
         })
 

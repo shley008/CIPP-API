@@ -4,6 +4,8 @@ function Invoke-ListExConnectorTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Exchange.Connector.Read
+    .DESCRIPTION
+        Lists saved Exchange connector templates for creating inbound/outbound connectors.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -24,8 +26,10 @@ function Invoke-ListExConnectorTemplates {
             $GUID = $_.RowKey
             $Direction = $_.direction
             $data = $_.JSON | ConvertFrom-Json
-            $data | Add-Member -NotePropertyName 'GUID' -NotePropertyValue $GUID -Force
-            $data | Add-Member -NotePropertyName 'cippconnectortype' -NotePropertyValue $Direction -Force
+            $data | Add-Member -NotePropertyMembers ([ordered]@{
+                    GUID              = $GUID
+                    cippconnectortype = $Direction
+                }) -Force
             $data
         } | Sort-Object -Property displayName
     } else {

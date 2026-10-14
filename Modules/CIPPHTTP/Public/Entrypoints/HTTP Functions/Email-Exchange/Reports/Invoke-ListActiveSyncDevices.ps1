@@ -4,6 +4,8 @@ function Invoke-ListActiveSyncDevices {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists all ActiveSync mobile devices registered across Exchange Online mailboxes in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -32,7 +34,7 @@ function Invoke-ListActiveSyncDevices {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
     return ([HttpResponseContext]@{

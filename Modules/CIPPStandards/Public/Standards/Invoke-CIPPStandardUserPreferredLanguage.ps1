@@ -25,7 +25,7 @@ function Invoke-CIPPStandardUserPreferredLanguage {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -92,7 +92,6 @@ function Invoke-CIPPStandardUserPreferredLanguage {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'IncorrectUsers' -FieldValue $IncorrectUsers -StoreAs json -Tenant $Tenant
 
         if ($IncorrectUsers.userPrincipalName) { $FieldValue = $IncorrectUsers | Select-Object -Property userPrincipalName, displayName, preferredLanguage, userType } else { $FieldValue = @() }
 

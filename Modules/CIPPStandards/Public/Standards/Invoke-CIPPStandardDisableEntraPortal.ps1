@@ -6,7 +6,7 @@ function Invoke-CIPPStandardDisableEntraPortal {
         (APIName) DisableEntraPortal
     .SYNOPSIS
         (Label) Disables the Entra Portal for standard users
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -39,7 +39,6 @@ function Invoke-CIPPStandardDisableEntraPortal {
 
     if ($Settings.report -eq $true) {
         set-CIPPStandardsCompareField -FieldName 'standards.DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEntraPortal' -FieldValue $CurrentInfo.isSoftwareOathEnabled -StoreAs bool -Tenant $tenant
     }
 
 }

@@ -23,28 +23,28 @@ function Invoke-CippTestCISAMSEXO102 {
             return
         }
 
-        $AcceptableActions = @('DeleteMessage', 'Quarantine')
+        $AcceptableActions = @('Quarantine', 'Reject')
         $FailedPolicies = [System.Collections.Generic.List[object]]::new()
 
         foreach ($Policy in $MalwarePolicies) {
-            if ($Policy.Action -notin $AcceptableActions) {
+            if ($Policy.FileTypeAction -notin $AcceptableActions) {
                 $FailedPolicies.Add([PSCustomObject]@{
                     'Policy Name' = $Policy.Name
-                    'Current Action' = $Policy.Action
-                    'Expected' = 'DeleteMessage or Quarantine'
+                    'Current Action' = $Policy.FileTypeAction
+                    'Expected' = 'Quarantine or Reject'
                 })
             }
         }
 
         if ($FailedPolicies.Count -eq 0) {
-            $Result = "✅ **Pass**: All $($MalwarePolicies.Count) malware filter policy/policies quarantine or delete emails with malware."
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: All $($MalwarePolicies.Count) malware filter policy/policies quarantine or delete emails with malware.")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: $($FailedPolicies.Count) of $($MalwarePolicies.Count) malware filter policy/policies do not quarantine or delete malware:`n`n"
-            $Result += "| Policy Name | Current Action | Expected |`n"
-            $Result += "| :---------- | :------------- | :------- |`n"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: $($FailedPolicies.Count) of $($MalwarePolicies.Count) malware filter policy/policies do not quarantine or delete malware:`n`n")
+            $null = $Result.Append("| Policy Name | Current Action | Expected |`n")
+            $null = $Result.Append("| :---------- | :------------- | :------- |`n")
             foreach ($Policy in $FailedPolicies) {
-                $Result += "| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n"
+                $null = $Result.Append("| $($Policy.'Policy Name') | $($Policy.'Current Action') | $($Policy.Expected) |`n")
             }
             $Status = 'Failed'
         }

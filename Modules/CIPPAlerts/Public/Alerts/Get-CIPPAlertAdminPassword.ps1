@@ -12,7 +12,7 @@ function Get-CIPPAlertAdminPassword {
         $TenantFilter
     )
     try {
-        $TenantId = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter).customerId
+        $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
 
         # Get role assignments without expanding principal to avoid rate limiting
         $RoleAssignments = New-GraphGETRequest -uri "https://graph.microsoft.com/beta/roleManagement/directory/roleAssignments?`$filter=roleDefinitionId eq '62e90394-69f5-4237-9190-012177145e10'" -tenantid $($TenantFilter) | Where-Object { $_.principalOrganizationId -EQ $TenantId }
@@ -38,9 +38,7 @@ function Get-CIPPAlertAdminPassword {
             $AlertData = @()
         }
 
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get admin password changes for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage

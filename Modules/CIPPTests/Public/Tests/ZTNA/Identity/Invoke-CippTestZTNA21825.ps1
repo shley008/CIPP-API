@@ -20,45 +20,45 @@ function Invoke-CippTestZTNA21825 {
         $CAPolicies = Get-CIPPTestData -TenantFilter $Tenant -Type 'ConditionalAccessPolicies'
 
         # Filter to policies targeting roles
-        $RoleScopedPolicies = $CAPolicies | Where-Object {
+        $RoleScopedPolicies = $CAPolicies.Where({
             $_.conditions.users.includeRoles -and $_.conditions.users.includeRoles.Count -gt 0
-        }
+        })
 
         # Recommended: Sign-in frequency should be 4 hours or less for privileged users
         $RecommendedMaxHours = 4
 
-        $ResultMarkdown = "## Privileged User Sign-In Sessions`n`n"
-        $ResultMarkdown += "**Total Privileged Roles Found:** $($PrivilegedRoles.Count)`n`n"
-        $ResultMarkdown += "**CA Policies Targeting Roles:** $($RoleScopedPolicies.Count)`n`n"
-        $ResultMarkdown += "**Recommended Sign In Session Hours:** $RecommendedMaxHours`n`n"
-        $ResultMarkdown += "### Conditional Access Policies by Privileged Role`n`n"
+        $ResultMarkdown = [System.Text.StringBuilder]::new("## Privileged User Sign-In Sessions`n`n")
+        $null = $ResultMarkdown.Append("**Total Privileged Roles Found:** $($PrivilegedRoles.Count)`n`n")
+        $null = $ResultMarkdown.Append("**CA Policies Targeting Roles:** $($RoleScopedPolicies.Count)`n`n")
+        $null = $ResultMarkdown.Append("**Recommended Sign In Session Hours:** $RecommendedMaxHours`n`n")
+        $null = $ResultMarkdown.Append("### Conditional Access Policies by Privileged Role`n`n")
 
         $AllRolesCovered = $true
 
         foreach ($Role in $PrivilegedRoles) {
-            $ResultMarkdown += "#### $($Role.displayName)`n`n"
+            $null = $ResultMarkdown.Append("#### $($Role.displayName)`n`n")
 
             # Get CA policies assigned to this role
-            $AssignedPolicies = $CAPolicies | Where-Object { $_.conditions.users.includeRoles -contains $Role.id }
-            $EnabledPolicies = $AssignedPolicies | Where-Object { $_.state -eq 'enabled' }
+            $AssignedPolicies = $CAPolicies.Where({ $_.conditions.users.includeRoles -contains $Role.id })
+            $EnabledPolicies = $AssignedPolicies.Where({ $_.state -eq 'enabled' })
 
             if ($EnabledPolicies.Count -gt 0) {
                 # Check if at least one compliant enabled policy covers this role
-                $CompliantForRole = $EnabledPolicies | Where-Object {
+                $CompliantForRole = $EnabledPolicies.Where({
                     $_.sessionControls.signInFrequency -and
                     $_.sessionControls.signInFrequency.type -eq 'hours' -and
                     $_.sessionControls.signInFrequency.value -le $RecommendedMaxHours
-                }
+                })
 
                 $RoleStatus = if ($CompliantForRole.Count -gt 0) {
                     '✅ Covered'
                 } else {
                     '❌ Not Covered'; $AllRolesCovered = $false
                 }
-                $ResultMarkdown += "**Status:** $RoleStatus`n`n"
+                $null = $ResultMarkdown.Append("**Status:** $RoleStatus`n`n")
 
-                $ResultMarkdown += "| Policy Name | Sign-In Frequency | Compliant |`n"
-                $ResultMarkdown += "| :--- | :--- | :--- |`n"
+                $null = $ResultMarkdown.Append("| Policy Name | Sign-In Frequency | Compliant |`n")
+                $null = $ResultMarkdown.Append("| :--- | :--- | :--- |`n")
 
                 foreach ($Policy in $EnabledPolicies) {
                     $FreqValue = 'Not Configured'
@@ -78,12 +78,12 @@ function Invoke-CippTestZTNA21825 {
                     }
 
                     $PolicyLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.id)"
-                    $ResultMarkdown += "| [$($Policy.displayName)]($PolicyLink) | $FreqValue | $IsCompliant |`n"
+                    $null = $ResultMarkdown.Append("| [$($Policy.displayName)]($PolicyLink) | $FreqValue | $IsCompliant |`n")
                 }
-                $ResultMarkdown += "`n"
+                $null = $ResultMarkdown.Append("`n")
             } else {
-                $ResultMarkdown += "**Status:** ❌ No CA policies assigned`n`n"
-                $ResultMarkdown += "*No Conditional Access policies target this privileged role.*`n`n"
+                $null = $ResultMarkdown.Append("**Status:** ❌ No CA policies assigned`n`n")
+                $null = $ResultMarkdown.Append("*No Conditional Access policies target this privileged role.*`n`n")
                 $AllRolesCovered = $false
             }
         }
@@ -91,10 +91,10 @@ function Invoke-CippTestZTNA21825 {
         $Passed = if ($AllRolesCovered -and $PrivilegedRoles.Count -gt 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown += "✅ **All privileged roles are covered by enabled policies enforcing short-lived sessions (≤$RecommendedMaxHours hours).**`n"
+            $null = $ResultMarkdown.Append("✅ **All privileged roles are covered by enabled policies enforcing short-lived sessions (≤$RecommendedMaxHours hours).**`n")
         } else {
-            $ResultMarkdown += "❌ **Not all privileged roles are covered by compliant sign-in frequency controls.**`n"
-            $ResultMarkdown += "`n**Recommendation:** Configure Conditional Access policies to enforce sign-in frequency of $RecommendedMaxHours hours or less for ALL privileged roles.`n"
+            $null = $ResultMarkdown.Append("❌ **Not all privileged roles are covered by compliant sign-in frequency controls.**`n")
+            $null = $ResultMarkdown.Append("`n**Recommendation:** Configure Conditional Access policies to enforce sign-in frequency of $RecommendedMaxHours hours or less for ALL privileged roles.`n")
         }
 
         Add-CippTestResult -TenantFilter $Tenant -TestId $TestId -TestType 'Identity' -Status $Passed -ResultMarkdown $ResultMarkdown -Risk 'Medium' -Name 'Privileged users have short-lived sign-in sessions' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Access control'

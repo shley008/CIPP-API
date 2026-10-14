@@ -4,6 +4,8 @@ Function Invoke-ListServiceHealth {
         Entrypoint
     .ROLE
         Tenant.Administration.Read
+    .DESCRIPTION
+        Lists active Microsoft 365 service health issues and advisories for a tenant or all tenants.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -17,8 +19,10 @@ Function Invoke-ListServiceHealth {
             $TenantName = $_.displayName
             Write-Host "Processed Service Health for $TenantName via AllTenants"
             $prop = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/admin/serviceAnnouncement/issues?`$filter=endDateTime eq null" -tenantid $_.defaultDomainName
-            $prop | Add-Member -NotePropertyName 'tenant' -NotePropertyValue $TenantName
-            $prop | Add-Member -NotePropertyName 'defaultDomainName' -NotePropertyValue $_.defaultDomainName
+            $prop | Add-Member -NotePropertyMembers ([ordered]@{
+                    tenant            = $TenantName
+                    defaultDomainName = $_.defaultDomainName
+                })
             $prop
         }
     } else {

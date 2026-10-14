@@ -30,7 +30,7 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -86,7 +86,6 @@ function Invoke-CIPPStandardPasswordExpireDisabled {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'PasswordExpireDisabled' -FieldValue $DomainsWithoutPassExpire -StoreAs json -Tenant $tenant
 
         $CurrentValue = @{
             DomainsWithoutPassExpire = @($DomainsWithoutPassExpire)

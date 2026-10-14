@@ -19,13 +19,17 @@ function Invoke-CippTestZTNA21992 {
 
         $OldAppCerts = @()
         if ($Apps) {
-            $OldAppCerts = $Apps | Where-Object {
+            $OldAppCerts = $Apps.Where({
                 $_.keyCredentials -and $_.keyCredentials.Count -gt 0
-            } | ForEach-Object {
+            }) | ForEach-Object {
                 $App = $_
-                $OldestCert = $App.keyCredentials | Where-Object { $_.startDateTime } | ForEach-Object {
-                    [DateTime]$_.startDateTime
-                } | Sort-Object | Select-Object -First 1
+                $OldestCert = $null
+                foreach ($Credential in $App.keyCredentials) {
+                    if ($Credential.startDateTime) {
+                        $Started = [DateTime]$Credential.startDateTime
+                        if ($null -eq $OldestCert -or $Started -lt $OldestCert) { $OldestCert = $Started }
+                    }
+                }
 
                 if ($OldestCert -and $OldestCert -lt $ThresholdDate) {
                     [PSCustomObject]@{
@@ -41,13 +45,17 @@ function Invoke-CippTestZTNA21992 {
 
         $OldSPCerts = @()
         if ($ServicePrincipals) {
-            $OldSPCerts = $ServicePrincipals | Where-Object {
+            $OldSPCerts = $ServicePrincipals.Where({
                 $_.keyCredentials -and $_.keyCredentials.Count -gt 0
-            } | ForEach-Object {
+            }) | ForEach-Object {
                 $SP = $_
-                $OldestCert = $SP.keyCredentials | Where-Object { $_.startDateTime } | ForEach-Object {
-                    [DateTime]$_.startDateTime
-                } | Sort-Object | Select-Object -First 1
+                $OldestCert = $null
+                foreach ($Credential in $SP.keyCredentials) {
+                    if ($Credential.startDateTime) {
+                        $Started = [DateTime]$Credential.startDateTime
+                        if ($null -eq $OldestCert -or $Started -lt $OldestCert) { $OldestCert = $Started }
+                    }
+                }
 
                 if ($OldestCert -and $OldestCert -lt $ThresholdDate) {
                     [PSCustomObject]@{
@@ -68,40 +76,39 @@ function Invoke-CippTestZTNA21992 {
 
         $Status = 'Failed'
 
-        $ResultLines = @(
-            "Found $($OldAppCerts.Count) application(s) and $($OldSPCerts.Count) service principal(s) with certificates not rotated within $RotationThresholdDays days."
-            ''
-            "**Certificate rotation threshold:** $RotationThresholdDays days"
-            ''
-        )
+        $ResultLines = [System.Collections.Generic.List[string]]::new()
+        $ResultLines.Add("Found $($OldAppCerts.Count) application(s) and $($OldSPCerts.Count) service principal(s) with certificates not rotated within $RotationThresholdDays days.")
+        $ResultLines.Add('')
+        $ResultLines.Add("**Certificate rotation threshold:** $RotationThresholdDays days")
+        $ResultLines.Add('')
 
         if ($OldAppCerts.Count -gt 0) {
-            $ResultLines += '**Applications with old certificates:**'
-            $Top10Apps = $OldAppCerts | Select-Object -First 10
+            $ResultLines.Add('**Applications with old certificates:**')
+            $Top10Apps = $OldAppCerts.Where({ $true }, 'First', 10)
             foreach ($App in $Top10Apps) {
                 $DaysOld = [Math]::Round(((Get-Date) - $App.OldestCertDate).TotalDays, 0)
-                $ResultLines += "- $($App.DisplayName) (Certificate age: $DaysOld days)"
+                $ResultLines.Add("- $($App.DisplayName) (Certificate age: $DaysOld days)")
             }
             if ($OldAppCerts.Count -gt 10) {
-                $ResultLines += "- ... and $($OldAppCerts.Count - 10) more application(s)"
+                $ResultLines.Add("- ... and $($OldAppCerts.Count - 10) more application(s)")
             }
-            $ResultLines += ''
+            $ResultLines.Add('')
         }
 
         if ($OldSPCerts.Count -gt 0) {
-            $ResultLines += '**Service principals with old certificates:**'
-            $Top10SPs = $OldSPCerts | Select-Object -First 10
+            $ResultLines.Add('**Service principals with old certificates:**')
+            $Top10SPs = $OldSPCerts.Where({ $true }, 'First', 10)
             foreach ($SP in $Top10SPs) {
                 $DaysOld = [Math]::Round(((Get-Date) - $SP.OldestCertDate).TotalDays, 0)
-                $ResultLines += "- $($SP.DisplayName) (Certificate age: $DaysOld days)"
+                $ResultLines.Add("- $($SP.DisplayName) (Certificate age: $DaysOld days)")
             }
             if ($OldSPCerts.Count -gt 10) {
-                $ResultLines += "- ... and $($OldSPCerts.Count - 10) more service principal(s)"
+                $ResultLines.Add("- ... and $($OldSPCerts.Count - 10) more service principal(s)")
             }
-            $ResultLines += ''
+            $ResultLines.Add('')
         }
 
-        $ResultLines += '**Recommendation:** Rotate certificates regularly to reduce the risk of credential compromise.'
+        $ResultLines.Add('**Recommendation:** Rotate certificates regularly to reduce the risk of credential compromise.')
 
         $Result = $ResultLines -join "`n"
 

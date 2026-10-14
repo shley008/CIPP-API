@@ -17,29 +17,29 @@ function Invoke-CippTestZTNA24840 {
             return
         }
 
-        $AndroidWifiConfProfiles = @($DeviceConfigs | Where-Object { $_.'@odata.type' -eq '#microsoft.graph.androidDeviceOwnerEnterpriseWiFiConfiguration' })
-        $CompliantAndroidWifiConfProfiles = @($AndroidWifiConfProfiles | Where-Object { $_.wiFiSecurityType -eq 'wpaEnterprise' })
-        $AssignedCompliantProfiles = @($CompliantAndroidWifiConfProfiles | Where-Object { $_.assignments -and $_.assignments.Count -gt 0 })
+        $AndroidWifiConfProfiles = @($DeviceConfigs.Where({ $_.'@odata.type' -eq '#microsoft.graph.androidDeviceOwnerEnterpriseWiFiConfiguration' }))
+        $CompliantAndroidWifiConfProfiles = @($AndroidWifiConfProfiles.Where({ $_.wiFiSecurityType -eq 'wpaEnterprise' }))
+        $AssignedCompliantProfiles = @($CompliantAndroidWifiConfProfiles.Where({ $_.assignments -and $_.assignments.Count -gt 0 }))
         $Passed = $AssignedCompliantProfiles.Count -gt 0
 
         if ($Passed) {
-            $ResultMarkdown = "✅ At least one Enterprise Wi-Fi profile for android exists and is assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ At least one Enterprise Wi-Fi profile for android exists and is assigned.`n`n")
         } else {
-            $ResultMarkdown = "❌ No Enterprise Wi-Fi profile for android exists or none are assigned.`n`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ No Enterprise Wi-Fi profile for android exists or none are assigned.`n`n")
         }
 
         if ($CompliantAndroidWifiConfProfiles.Count -gt 0) {
-            $ResultMarkdown += "## Android Wi-Fi Configuration Profiles`n`n"
-            $ResultMarkdown += "| Policy Name | Wi-Fi Security Type | Assigned |`n"
-            $ResultMarkdown += "| :---------- | :------------------ | :------- |`n"
+            $null = $ResultMarkdown.Append("## Android Wi-Fi Configuration Profiles`n`n")
+            $null = $ResultMarkdown.Append("| Policy Name | Wi-Fi Security Type | Assigned |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :------------------ | :------- |`n")
 
             foreach ($policy in $CompliantAndroidWifiConfProfiles) {
                 $securityType = if ($policy.wiFiSecurityType) { $policy.wiFiSecurityType } else { 'Unknown' }
                 $assigned = if ($policy.assignments -and $policy.assignments.Count -gt 0) { '✅ Yes' } else { '❌ No' }
-                $ResultMarkdown += "| $($policy.displayName) | $securityType | $assigned |`n"
+                $null = $ResultMarkdown.Append("| $($policy.displayName) | $securityType | $assigned |`n")
             }
         } else {
-            $ResultMarkdown += "No compliant Android Enterprise WiFi configuration profiles found.`n"
+            $null = $ResultMarkdown.Append("No compliant Android Enterprise WiFi configuration profiles found.`n")
         }
 
         $Status = if ($Passed) { 'Passed' } else { 'Failed' }

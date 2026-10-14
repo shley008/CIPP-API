@@ -28,7 +28,7 @@ function Invoke-CIPPStandardintuneRequireMFA {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -70,8 +70,6 @@ function Invoke-CIPPStandardintuneRequireMFA {
     }
 
     if ($Settings.report -eq $true) {
-        $RequireMFA = if ($PreviousSetting.multiFactorAuthConfiguration -eq 'required') { $true } else { $false }
-
         $CurrentValue = @{
             multiFactorAuthConfiguration = $PreviousSetting.multiFactorAuthConfiguration
         }
@@ -79,6 +77,5 @@ function Invoke-CIPPStandardintuneRequireMFA {
             multiFactorAuthConfiguration = 'required'
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.intuneRequireMFA' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -Tenant $Tenant
-        Add-CIPPBPAField -FieldName 'intuneRequireMFA' -FieldValue $RequireMFA -StoreAs bool -Tenant $Tenant
     }
 }

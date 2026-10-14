@@ -11,7 +11,7 @@ function Get-CIPPAlertDefenderStatus {
         $TenantFilter
     )
     try {
-        $TenantId = (Get-Tenants | Where-Object -Property defaultDomainName -EQ $TenantFilter).customerId
+        $TenantId = (Get-Tenants -TenantFilter $TenantFilter).customerId
         $AlertData = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/tenantRelationships/managedTenants/windowsProtectionStates?`$top=999&`$filter=tenantId eq '$($TenantId)'" | Where-Object { $_.realTimeProtectionEnabled -eq $false -or $_.MalwareprotectionEnabled -eq $false } | ForEach-Object {
             [PSCustomObject]@{
                 ManagedDeviceName              = $_.managedDeviceName
@@ -26,11 +26,13 @@ function Get-CIPPAlertDefenderStatus {
                 TenantId                       = $_.tenantId
             }
         }
-        if ($AlertData) {
-            Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
-        }
+        Write-AlertTrace -cmdletName $MyInvocation.MyCommand -tenantFilter $TenantFilter -data $AlertData
 
     } catch {
+        if ($_.Exception.Message -eq 'Request not applicable to target tenant.') {
+            Write-Information "Skipping defender status for $($TenantFilter): Microsoft 365 Lighthouse is not available."
+            return
+        }
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API 'Alerts' -tenant $TenantFilter -message "Could not get defender status for $($TenantFilter): $($ErrorMessage.NormalizedError)" -sev Error -LogData $ErrorMessage
     }

@@ -4,13 +4,11 @@ function Invoke-ListPerUserMFA {
         Entrypoint
     .ROLE
         Identity.User.Read
+    .DESCRIPTION
+        Lists per-user MFA state (enabled, enforced, disabled) for users in a tenant via the legacy MFA management API.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
-
-    $APIName = $Request.Params.CIPPEndpoint
-    $User = $Request.Headers
-    Write-LogMessage -Headers $User -API $APIName -message 'Accessed this API' -Sev 'Debug'
 
     # Parse query parameters
     $Tenant = $Request.query.tenantFilter
@@ -39,6 +37,5 @@ function Invoke-ListPerUserMFA {
             StatusCode = $StatusCode
             Body       = @($Results)
         })
-
 
 }

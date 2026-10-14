@@ -13,6 +13,7 @@ function Invoke-ExecSetPackageTag {
 
     $Table = Get-CippTable -tablename 'templates'
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         $GUIDS = $Request.body.GUID
         $Remove = $Request.body.Remove
@@ -30,7 +31,7 @@ function Invoke-ExecSetPackageTag {
         }
 
         foreach ($GUID in $GUIDS) {
-            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type Guid
+            $SafeGUID = ConvertTo-CIPPODataFilterValue -Value $GUID -Type String
             $Filter = "RowKey eq '$SafeGUID'"
             $Template = Get-CIPPAzDataTableEntity @Table -Filter $Filter
             $Entity = @{
@@ -55,6 +56,7 @@ function Invoke-ExecSetPackageTag {
         $body = [pscustomobject]@{ 'Results' = $SuccessMessage }
 
     } catch {
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage = Get-CippException -Exception $_
         if ($Remove -eq $true) {
             Write-LogMessage -headers $Headers -API $APIName -message "Failed to remove package tag: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
@@ -66,7 +68,7 @@ function Invoke-ExecSetPackageTag {
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 }

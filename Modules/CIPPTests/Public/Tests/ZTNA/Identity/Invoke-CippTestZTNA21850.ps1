@@ -10,34 +10,34 @@ function Invoke-CippTestZTNA21850 {
     try {
         # Get password rule settings from Settings cache
         $Settings = Get-CIPPTestData -TenantFilter $Tenant -Type 'Settings'
-        $PasswordRuleSettings = $Settings | Where-Object { $_.displayName -eq 'Password Rule Settings' }
+        $PasswordRuleSettings = foreach ($Setting in $Settings) { if ($Setting.displayName -eq 'Password Rule Settings') { $Setting } }
 
         $PortalLink = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/PasswordProtection/fromNav/'
 
         if ($null -eq $PasswordRuleSettings) {
             $Passed = 'Failed'
-            $ResultMarkdown = '❌ Password rule settings template not found.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('❌ Password rule settings template not found.')
         } else {
-            $LockoutThresholdSetting = $PasswordRuleSettings.values | Where-Object { $_.name -eq 'LockoutThreshold' }
+            $LockoutThresholdSetting = foreach ($Value in $PasswordRuleSettings.values) { if ($Value.name -eq 'LockoutThreshold') { $Value } }
 
             if ($null -eq $LockoutThresholdSetting) {
                 $Passed = 'Failed'
-                $ResultMarkdown = "❌ Lockout threshold setting not found in [password rule settings]($PortalLink)."
+                $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Lockout threshold setting not found in [password rule settings]($PortalLink).")
             } else {
                 $LockoutThreshold = [int]$LockoutThresholdSetting.value
 
                 if ($LockoutThreshold -le 10) {
                     $Passed = 'Passed'
-                    $ResultMarkdown = "✅ Smart lockout threshold is set to 10 or below.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("✅ Smart lockout threshold is set to 10 or below.`n`n")
                 } else {
                     $Passed = 'Failed'
-                    $ResultMarkdown = "❌ Smart lockout threshold is configured above 10.`n`n"
+                    $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Smart lockout threshold is configured above 10.`n`n")
                 }
 
-                $ResultMarkdown += "## [Smart lockout configuration]($PortalLink)`n`n"
-                $ResultMarkdown += "| Setting | Value |`n"
-                $ResultMarkdown += "| :---- | :---- |`n"
-                $ResultMarkdown += "| Lockout threshold | $LockoutThreshold attempts |`n"
+                $null = $ResultMarkdown.Append("## [Smart lockout configuration]($PortalLink)`n`n")
+                $null = $ResultMarkdown.Append("| Setting | Value |`n")
+                $null = $ResultMarkdown.Append("| :---- | :---- |`n")
+                $null = $ResultMarkdown.Append("| Lockout threshold | $LockoutThreshold attempts |`n")
             }
         }
 

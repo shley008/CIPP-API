@@ -4,6 +4,8 @@ function Invoke-ListAppApprovalTemplates {
         Entrypoint,AnyTenant
     .ROLE
         Tenant.Application.Read
+    .DESCRIPTION
+        Lists saved application approval templates for standardized app consent configurations.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -52,15 +54,16 @@ function Invoke-ListAppApprovalTemplates {
                 }
             }
         }
-
+        $StatusCode = [HttpStatusCode]::OK
     } catch {
         $Body = @{
             Results = "Failed to list app deployment templates: $($_.Exception.Message)"
         }
+        $StatusCode = [HttpStatusCode]::InternalServerError
     }
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = ConvertTo-Json -Depth 10 -InputObject @($Body)
         })
 }

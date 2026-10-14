@@ -23,15 +23,15 @@ function Invoke-CippTestCISAMSEXO111 {
             return
         }
 
-        $StandardEOP = $PresetPolicies | Where-Object { $_.Identity -eq 'Standard Preset Security Policy' -and $_.State -eq 'Enabled' }
-        $StrictEOP = $PresetPolicies | Where-Object { $_.Identity -eq 'Strict Preset Security Policy' -and $_.State -eq 'Enabled' }
+        $StandardEOP = $PresetPolicies.Where({ $_.Identity -eq 'Standard Preset Security Policy' -and $_.State -eq 'Enabled' })
+        $StrictEOP = $PresetPolicies.Where({ $_.Identity -eq 'Strict Preset Security Policy' -and $_.State -eq 'Enabled' })
 
-        $StandardATP = $PresetPolicies | Where-Object { $_.Identity -like '*Preset Security Policy*' -and $_.ImpersonationProtectionState -eq 'Enabled' }
+        $StandardATP = $PresetPolicies.Where({ $_.Identity -like '*Preset Security Policy*' -and $_.ImpersonationProtectionState -eq 'Enabled' })
 
-        $EnabledPolicies = @()
-        if ($StandardEOP) { $EnabledPolicies += 'Standard EOP' }
-        if ($StrictEOP) { $EnabledPolicies += 'Strict EOP' }
-        if ($StandardATP) { $EnabledPolicies += "$($StandardATP.Count) ATP policy/policies with impersonation protection" }
+        $EnabledPolicies = [System.Collections.Generic.List[string]]::new()
+        if ($StandardEOP) { $EnabledPolicies.Add('Standard EOP') }
+        if ($StrictEOP) { $EnabledPolicies.Add('Strict EOP') }
+        if ($StandardATP) { $EnabledPolicies.Add("$($StandardATP.Count) ATP policy/policies with impersonation protection") }
 
         if ($EnabledPolicies.Count -gt 0) {
             $Result = "✅ **Pass**: Preset security policies with impersonation protection are enabled:`n`n"

@@ -4,6 +4,8 @@ function Invoke-ListExchangeConnectors {
         Entrypoint
     .ROLE
         Exchange.Connector.Read
+    .DESCRIPTION
+        Lists inbound and outbound mail flow connectors configured in Exchange Online.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -15,7 +17,7 @@ function Invoke-ListExchangeConnectors {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $ErrorMessage
     }
 

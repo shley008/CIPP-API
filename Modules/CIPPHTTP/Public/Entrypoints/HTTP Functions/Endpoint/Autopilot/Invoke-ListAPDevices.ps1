@@ -4,6 +4,8 @@ Function Invoke-ListAPDevices {
         Entrypoint
     .ROLE
         Endpoint.Autopilot.Read
+    .DESCRIPTION
+        Lists Windows Autopilot device identities registered in a tenant.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -14,7 +16,7 @@ Function Invoke-ListAPDevices {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-NormalizedError -Message $_.Exception.Message
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GraphRequest = $ErrorMessage
     }
 

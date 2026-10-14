@@ -7,7 +7,7 @@ function Invoke-CIPPStandardDisableEWS {
     .SYNOPSIS
         (Label) Disable Exchange Web Services
     .DESCRIPTION
-        (Helptext) Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127.
+        (Helptext) Disables Exchange Web Services (EWS) organization-wide. This reduces the attack surface by blocking legacy API access to mailbox data. Warning: This may break Office web add-ins on builds older than 16.0.19127. Conflicts with the "Configure EWS allowed applications" standard, which sets EwsEnabled to true: do not apply both to a tenant.
         (DocsDescription) Disables Exchange Web Services (EWS) at the organization level to reduce attack surface. EWS provides cross-platform API access to sensitive Exchange Online data such as emails, meetings, and contacts. If compromised, attackers can access confidential data, send phishing emails, or spoof identities. Disabling EWS also reduces legacy app usage and minimizes exploitable endpoints. Note that this may break first-party features including web add-ins for Word, Excel, PowerPoint, and Outlook on builds older than 16.0.19127.
     .NOTES
         CAT
@@ -33,11 +33,11 @@ function Invoke-CIPPStandardDisableEWS {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
-    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableEWS' -TenantFilter $Tenant -RequiredCapabilities @('EXCHANGE_S_STANDARD', 'EXCHANGE_S_ENTERPRISE', 'EXCHANGE_S_STANDARD_GOV', 'EXCHANGE_S_ENTERPRISE_GOV', 'EXCHANGE_LITE')
+    $TestResult = Test-CIPPStandardLicense -StandardName 'DisableEWS' -TenantFilter $Tenant -Preset Exchange
 
     if ($TestResult -eq $false) {
         return $true
@@ -85,6 +85,5 @@ function Invoke-CIPPStandardDisableEWS {
             DisableEWS = $true
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableEWS' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'DisableEWS' -FieldValue $StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

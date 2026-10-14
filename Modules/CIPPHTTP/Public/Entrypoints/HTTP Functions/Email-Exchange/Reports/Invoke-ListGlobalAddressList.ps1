@@ -4,6 +4,8 @@ Function Invoke-ListGlobalAddressList {
         Entrypoint
     .ROLE
         Exchange.Mailbox.Read
+    .DESCRIPTION
+        Lists all recipients in the Exchange Online Global Address List, including display names, email addresses, and recipient types.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -16,7 +18,7 @@ Function Invoke-ListGlobalAddressList {
         $StatusCode = [HttpStatusCode]::OK
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
-        $StatusCode = [HttpStatusCode]::Forbidden
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $GAL = $ErrorMessage.NormalizedError
     }
 

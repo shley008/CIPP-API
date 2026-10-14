@@ -23,17 +23,17 @@ function Invoke-CippTestCISAMSEXO171 {
             return
         }
 
-        $AuditConfigObject = $AuditConfig | Select-Object -First 1
+        $AuditConfigObject = @($AuditConfig)[0]
 
         if ($AuditConfigObject.UnifiedAuditLogIngestionEnabled -eq $true) {
-            $Result = "✅ **Pass**: Microsoft Purview Audit (Standard) logging is enabled.`n`n"
-            $Result += "**Current Settings:**`n"
-            $Result += "- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)"
+            $Result = [System.Text.StringBuilder]::new("✅ **Pass**: Microsoft Purview Audit (Standard) logging is enabled.`n`n")
+            $null = $Result.Append("**Current Settings:**`n")
+            $null = $Result.Append("- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)")
             $Status = 'Passed'
         } else {
-            $Result = "❌ **Fail**: Microsoft Purview Audit (Standard) logging is not enabled.`n`n"
-            $Result += "**Current Settings:**`n"
-            $Result += "- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)"
+            $Result = [System.Text.StringBuilder]::new("❌ **Fail**: Microsoft Purview Audit (Standard) logging is not enabled.`n`n")
+            $null = $Result.Append("**Current Settings:**`n")
+            $null = $Result.Append("- UnifiedAuditLogIngestionEnabled: $($AuditConfigObject.UnifiedAuditLogIngestionEnabled)")
             $Status = 'Failed'
         }
 

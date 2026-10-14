@@ -70,16 +70,16 @@ function Invoke-CippTestZTNA21883 {
         # Determine pass/fail
         if ($MatchedPolicies.Count -ge 1) {
             $Status = 'Passed'
-            $ResultMarkdown = "✅ **Pass**: Workload identities are protected by risk-based Conditional Access policies.`n`n"
-            $ResultMarkdown += "## Matching policies`n`n"
-            $ResultMarkdown += "| Policy name | State | Service principals | Grant controls |`n"
-            $ResultMarkdown += "| :---------- | :---- | :----------------- | :------------- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("✅ **Pass**: Workload identities are protected by risk-based Conditional Access policies.`n`n")
+            $null = $ResultMarkdown.Append("## Matching policies`n`n")
+            $null = $ResultMarkdown.Append("| Policy name | State | Service principals | Grant controls |`n")
+            $null = $ResultMarkdown.Append("| :---------- | :---- | :----------------- | :------------- |`n")
 
             foreach ($Policy in $MatchedPolicies) {
                 $policyLink = "https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/PolicyBlade/policyId/$($Policy.id)"
                 $policyName = if ($Policy.displayName) { $Policy.displayName } else { 'Unnamed' }
                 $spTargets = if ($Policy.conditions.clientApplications.includeServicePrincipals) {
-                    ($Policy.conditions.clientApplications.includeServicePrincipals | Select-Object -First 3) -join ', '
+                    @($Policy.conditions.clientApplications.includeServicePrincipals.Where({ $true }, 'First', 3)) -join ', '
                     if ($Policy.conditions.clientApplications.includeServicePrincipals.Count -gt 3) {
                         $spTargets += " (and $($Policy.conditions.clientApplications.includeServicePrincipals.Count - 3) more)"
                     }
@@ -92,12 +92,12 @@ function Invoke-CippTestZTNA21883 {
                 } else {
                     'None'
                 }
-                $ResultMarkdown += "| [$policyName]($policyLink) | $($Policy.state) | $spTargets | $grants |`n"
+                $null = $ResultMarkdown.Append("| [$policyName]($policyLink) | $($Policy.state) | $spTargets | $grants |`n")
             }
         } else {
             $Status = 'Failed'
-            $ResultMarkdown = "❌ **Fail**: No Conditional Access policies found that protect workload identities with risk-based controls.`n`n"
-            $ResultMarkdown += 'Workload identities should be protected by policies that block authentication when service principal risk is detected.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ **Fail**: No Conditional Access policies found that protect workload identities with risk-based controls.`n`n")
+            $null = $ResultMarkdown.Append('Workload identities should be protected by policies that block authentication when service principal risk is detected.')
         }
 
         $TestParams = @{

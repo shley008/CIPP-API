@@ -17,24 +17,24 @@ function Invoke-CippTestZTNA21866 {
         }
 
         # Filter for unaddressed recommendations (active or postponed status)
-        $UnaddressedRecommendations = $Recommendations | Where-Object { $_.status -in @('active', 'postponed') }
+        $UnaddressedRecommendations = $Recommendations.Where({ $_.status -in @('active', 'postponed') })
 
         $Passed = if ($UnaddressedRecommendations.Count -eq 0) { 'Passed' } else { 'Failed' }
 
         if ($Passed -eq 'Passed') {
-            $ResultMarkdown = '✅ All Entra Recommendations are addressed.'
+            $ResultMarkdown = [System.Text.StringBuilder]::new('✅ All Entra Recommendations are addressed.')
         } else {
-            $ResultMarkdown = "❌ Found $($UnaddressedRecommendations.Count) unaddressed Entra recommendations.`n`n"
-            $ResultMarkdown += "## Unaddressed Entra recommendations`n`n"
-            $ResultMarkdown += "| Display Name | Status | Insights | Priority |`n"
-            $ResultMarkdown += "| :--- | :--- | :--- | :--- |`n"
+            $ResultMarkdown = [System.Text.StringBuilder]::new("❌ Found $($UnaddressedRecommendations.Count) unaddressed Entra recommendations.`n`n")
+            $null = $ResultMarkdown.Append("## Unaddressed Entra recommendations`n`n")
+            $null = $ResultMarkdown.Append("| Display Name | Status | Insights | Priority |`n")
+            $null = $ResultMarkdown.Append("| :--- | :--- | :--- | :--- |`n")
 
             foreach ($Item in $UnaddressedRecommendations) {
                 $DisplayName = $Item.displayName
                 $Status = $Item.status
                 $Insights = $Item.insights
                 $Priority = $Item.priority
-                $ResultMarkdown += "| $DisplayName | $Status | $Insights | $Priority |`n"
+                $null = $ResultMarkdown.Append("| $DisplayName | $Status | $Insights | $Priority |`n")
             }
         }
 

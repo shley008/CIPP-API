@@ -4,6 +4,8 @@ function Invoke-ListAuditLogSearches {
         Entrypoint
     .ROLE
         Tenant.Alert.Read
+    .DESCRIPTION
+        Lists or creates Microsoft 365 Unified Audit Log searches for a tenant, with support for retrieving search results.
     #>
     Param($Request, $TriggerMetadata)
     # Interact with the query parameters
@@ -13,6 +15,7 @@ function Invoke-ListAuditLogSearches {
     $Type = $Request.Query.Type
 
     if ($TenantFilter) {
+        $StatusCode = [HttpStatusCode]::OK
         switch ($Type) {
             'Searches' {
                 $Results = Get-CippAuditLogSearches -TenantFilter $TenantFilter
@@ -29,6 +32,7 @@ function Invoke-ListAuditLogSearches {
                     $Results = Get-CippAuditLogSearchResults -TenantFilter $TenantFilter -QueryId $SearchId
                 } catch {
                     $Results = @{ Error = $_.Exception.Message }
+                    $StatusCode = [HttpStatusCode]::InternalServerError
                 }
                 $Body = @{
                     Results  = @($Results)
@@ -74,7 +78,7 @@ function Invoke-ListAuditLogSearches {
         }
 
         return ([HttpResponseContext]@{
-                StatusCode = [HttpStatusCode]::OK
+                StatusCode = $StatusCode
                 Body       = $Body
             })
     } else {

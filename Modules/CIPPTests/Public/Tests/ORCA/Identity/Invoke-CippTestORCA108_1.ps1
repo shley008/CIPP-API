@@ -16,10 +16,10 @@ function Invoke-CippTestORCA108_1 {
 
         $FailedDomains = [System.Collections.Generic.List[object]]::new()
         $PassedDomains = [System.Collections.Generic.List[object]]::new()
-        $CustomDomains = $AcceptedDomains | Where-Object { $_.DomainName -notlike '*onmicrosoft.com' }
+        $CustomDomains = $AcceptedDomains.Where({ $_.DomainName -notlike '*onmicrosoft.com' })
 
         foreach ($Domain in $CustomDomains) {
-            $DkimRecord = $DkimConfig | Where-Object { $_.Domain -eq $Domain.DomainName }
+            $DkimRecord = $DkimConfig.Where({ $_.Domain -eq $Domain.DomainName })
 
             if ($DkimRecord -and $DkimRecord.Selector1CNAME -and $DkimRecord.Selector2CNAME) {
                 $PassedDomains.Add($Domain) | Out-Null
@@ -30,16 +30,16 @@ function Invoke-CippTestORCA108_1 {
 
         if ($FailedDomains.Count -eq 0) {
             $Status = 'Passed'
-            $Result = "All custom domains have DKIM DNS records configured.`n`n"
-            $Result += "**Compliant Domains:** $($PassedDomains.Count)"
+            $Result = [System.Text.StringBuilder]::new("All custom domains have DKIM DNS records configured.`n`n")
+            $null = $Result.Append("**Compliant Domains:** $($PassedDomains.Count)")
         } else {
             $Status = 'Failed'
-            $Result = "$($FailedDomains.Count) custom domains do not have DKIM DNS records configured.`n`n"
-            $Result += "**Non-Compliant Domains:** $($FailedDomains.Count)`n`n"
-            $Result += "| Domain Name |`n"
-            $Result += "|------------|`n"
+            $Result = [System.Text.StringBuilder]::new("$($FailedDomains.Count) custom domains do not have DKIM DNS records configured.`n`n")
+            $null = $Result.Append("**Non-Compliant Domains:** $($FailedDomains.Count)`n`n")
+            $null = $Result.Append("| Domain Name |`n")
+            $null = $Result.Append("|------------|`n")
             foreach ($Domain in $FailedDomains) {
-                $Result += "| $($Domain.DomainName) |`n"
+                $null = $Result.Append("| $($Domain.DomainName) |`n")
             }
         }
 

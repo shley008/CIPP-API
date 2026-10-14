@@ -34,7 +34,7 @@ function Invoke-CIPPStandardDisableAppCreation {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -81,8 +81,6 @@ function Invoke-CIPPStandardDisableAppCreation {
     }
 
     if ($Settings.report -eq $true) {
-        $State = -not $CurrentInfo.defaultUserRolePermissions.allowedToCreateApps
         Set-CIPPStandardsCompareField -FieldName 'standards.DisableAppCreation' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'UserAppCreationDisabled' -FieldValue $State -StoreAs bool -Tenant $tenant
     }
 }

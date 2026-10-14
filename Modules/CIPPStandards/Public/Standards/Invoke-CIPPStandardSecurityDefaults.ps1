@@ -28,7 +28,7 @@ function Invoke-CIPPStandardSecurityDefaults {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param($Tenant, $Settings)
@@ -68,7 +68,6 @@ function Invoke-CIPPStandardSecurityDefaults {
     }
 
     if ($Settings.report -eq $true) {
-        Add-CIPPBPAField -FieldName 'SecurityDefaults' -FieldValue $SecureDefaultsState.IsEnabled -StoreAs bool -Tenant $tenant
         $CurrentData = @{
             SecurityDefaultsEnabled = $SecureDefaultsState.IsEnabled
         }

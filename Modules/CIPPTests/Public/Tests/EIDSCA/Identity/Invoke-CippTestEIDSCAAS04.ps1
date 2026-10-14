@@ -13,18 +13,18 @@ function Invoke-CippTestEIDSCAAS04 {
             return
         }
 
-        $SmsConfig = $AuthMethodsPolicy.authenticationMethodConfigurations | Where-Object { $_.id -eq 'Sms' }
+        $SmsConfig = $AuthMethodsPolicy.authenticationMethodConfigurations.Where({ $_.id -eq 'Sms' })
 
         if (-not $SmsConfig) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'EIDSCAAS04' -TestType 'Identity' -Status 'Failed' -ResultMarkdown 'SMS authentication configuration not found in Authentication Methods Policy.' -Risk 'High' -Name 'SMS - No Sign-In' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Authentication Methods'
             return
         }
 
-        $InvalidTargets = @()
+        $InvalidTargets = [System.Collections.Generic.List[string]]::new()
         if ($SmsConfig.includeTargets) {
             foreach ($target in $SmsConfig.includeTargets) {
                 if ($target.isUsableForSignIn -ne $false) {
-                    $InvalidTargets += $target.id
+                    $InvalidTargets.Add($target.id)
                 }
             }
         }

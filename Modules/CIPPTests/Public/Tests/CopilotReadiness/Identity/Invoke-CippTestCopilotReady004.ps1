@@ -24,16 +24,16 @@ function Invoke-CippTestCopilotReady004 {
         # Build lookup of readiness data keyed by UPN
         $ReadinessLookup = @{}
         if ($ReadinessData) {
-            foreach ($Entry in ($ReadinessData | Where-Object { $_.userPrincipalName })) {
+            foreach ($Entry in ($ReadinessData.Where({ $_.userPrincipalName }))) {
                 $ReadinessLookup[$Entry.userPrincipalName.ToLower()] = $Entry
             }
         }
 
         # Use licensed active users as the denominator — users absent from the report have never used M365
-        $LicensedUsers = @($AllUsers | Where-Object {
+        $LicensedUsers = @($AllUsers.Where({
                 $_.userPrincipalName -and $_.accountEnabled -eq $true -and
-                ($_.assignedPlans | Where-Object { $_.capabilityStatus -eq 'Enabled' })
-            })
+                $_.assignedPlans.Where({ $_.capabilityStatus -eq 'Enabled' }, 'First').Count
+            }))
 
         if ($LicensedUsers.Count -eq 0) {
             Add-CippTestResult -TenantFilter $Tenant -TestId 'CopilotReady004' -TestType 'Identity' -Status 'Skipped' -ResultMarkdown 'No licensed active users found in the tenant.' -Risk 'Medium' -Name 'Users are actively using Exchange Online email' -UserImpact 'Medium' -ImplementationEffort 'Low' -Category 'Copilot Readiness'
@@ -56,18 +56,18 @@ function Invoke-CippTestCopilotReady004 {
 
         if ($ActivityPercent -ge $ActivityThresholdPercent) {
             $Status = 'Passed'
-            $Result = "**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'These users are good candidates for Copilot in Outlook, which provides AI-assisted drafting, summarization, and email coaching.'
+            $Result = [System.Text.StringBuilder]::new("**$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — above the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('These users are good candidates for Copilot in Outlook, which provides AI-assisted drafting, summarization, and email coaching.')
         } else {
             $Status = 'Failed'
-            $Result = "Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n"
-            $Result += 'Copilot for Outlook delivers the most value to active email users. '
-            $Result += "Consider reviewing Exchange Online license assignment and adoption before rolling out Copilot.`n`n"
+            $Result = [System.Text.StringBuilder]::new("Only **$ActiveCount of $TotalUsers licensed users ($ActivityPercent%)** sent email in the past 30 days — below the $ActivityThresholdPercent% threshold.`n`n")
+            $null = $Result.Append('Copilot for Outlook delivers the most value to active email users. ')
+            $null = $Result.Append("Consider reviewing Exchange Online license assignment and adoption before rolling out Copilot.`n`n")
             if ($InactiveUsers.Count -gt 0 -and $InactiveUsers.Count -le 20) {
-                $Result += "**Inactive users (no Outlook email in 30 days):**`n"
-                foreach ($Upn in $InactiveUsers) { $Result += "- $Upn`n" }
+                $null = $Result.Append("**Inactive users (no Outlook email in 30 days):**`n")
+                foreach ($Upn in $InactiveUsers) { $null = $Result.Append("- $Upn`n") }
             } elseif ($InactiveUsers.Count -gt 20) {
-                $Result += "**$($InactiveUsers.Count) users** had no Outlook email activity in the past 30 days."
+                $null = $Result.Append("**$($InactiveUsers.Count) users** had no Outlook email activity in the past 30 days.")
             }
         }
 

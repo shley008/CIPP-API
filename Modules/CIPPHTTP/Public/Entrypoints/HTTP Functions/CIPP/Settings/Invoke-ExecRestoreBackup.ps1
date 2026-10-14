@@ -14,7 +14,7 @@ function Invoke-ExecRestoreBackup {
     $AzureTableTypes = @(
         [string], [int], [long], [double], [bool], [datetime], [guid], [byte[]]
     )
-    $RestrictedTables = @('AccessRoleGroups', 'AccessIPRanges', 'CustomRoles') # tables that require superadmin to restore
+    $RestrictedTables = @('AccessRoleGroups', 'AccessIPRanges', 'CustomRoles', 'DevSecrets') # tables that require superadmin to restore
 
     # Resolve the calling user's roles, including Entra group-based roles
     $CallingUser = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($Request.Headers.'x-ms-client-principal')) | ConvertFrom-Json
@@ -23,6 +23,7 @@ function Invoke-ExecRestoreBackup {
     }
     $IsSuperAdmin = $CallingUser.userRoles -contains 'superadmin'
 
+    $StatusCode = [HttpStatusCode]::OK
     try {
         if ($Request.Body.BackupName -like 'CippBackup_*') {
             # Use Get-CIPPBackup which already handles fetching from blob storage
@@ -81,6 +82,7 @@ function Invoke-ExecRestoreBackup {
                     'Results' = "Successfully restored $RestoredCount rows from backup."
                 }
             } else {
+                $StatusCode = [HttpStatusCode]::NotFound
                 $body = [pscustomobject]@{
                     'Results' = 'Backup not found.'
                 }
@@ -116,12 +118,13 @@ function Invoke-ExecRestoreBackup {
         }
     } catch {
         Write-LogMessage -headers $Request.Headers -API $APINAME -message "Failed to restore backup: $($_.Exception.Message)" -Sev 'Error'
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $body = [pscustomobject]@{'Results' = "Backup restore failed: $($_.Exception.Message)" }
     }
 
 
     return ([HttpResponseContext]@{
-            StatusCode = [HttpStatusCode]::OK
+            StatusCode = $StatusCode
             Body       = $body
         })
 

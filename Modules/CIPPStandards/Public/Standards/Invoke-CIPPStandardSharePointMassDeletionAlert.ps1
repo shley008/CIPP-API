@@ -31,7 +31,7 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
         UPDATECOMMENTBLOCK
             Run the Tools\Update-StandardsComments.ps1 script to update this comment block
     .LINK
-        https://docs.cipp.app/user-documentation/tenant/standards/list-standards
+        https://docs.cipp.app/user-documentation/tenant/standards/alignment/templates/available-standards
     #>
 
     param ($Tenant, $Settings)
@@ -125,6 +125,5 @@ function Invoke-CIPPStandardSharePointMassDeletionAlert {
             NotifyUser = @($Settings.NotifyUser.value)
         }
         Set-CIPPStandardsCompareField -FieldName 'standards.SharePointMassDeletionAlert' -CurrentValue $CurrentValue -ExpectedValue $ExpectedValue -TenantFilter $Tenant
-        Add-CIPPBPAField -FieldName 'SharePointMassDeletionAlert' -FieldValue [bool]$StateIsCorrect -StoreAs bool -Tenant $Tenant
     }
 }

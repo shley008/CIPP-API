@@ -1,9 +1,11 @@
 function Invoke-ListCustomScripts {
     <#
     .FUNCTIONALITY
-        Entrypoint
+        Entrypoint, AnyTenant
     .ROLE
         CIPP.Tests.Read
+    .DESCRIPTION
+        Lists custom PowerShell scripts stored in CIPP, with optional filtering by script GUID and version history.
     #>
     [CmdletBinding()]
     param($Request, $TriggerMetadata)
@@ -33,12 +35,13 @@ function Invoke-ListCustomScripts {
             $Filter = "PartitionKey eq 'CustomScript'"
             $AllScripts = Get-CIPPAzDataTableEntity @Table -Filter $Filter
 
-            # Group by ScriptGuid and get latest version of each
+            # Group by ScriptGuid and get latest version of each, sorted by name for pickers
             $Scripts = $AllScripts |
                 Group-Object -Property ScriptGuid |
                 ForEach-Object {
                     $_.Group | Sort-Object -Property Version -Descending | Select-Object -First 1
-                }
+                } |
+                Sort-Object -Property ScriptName
         }
 
         $Body = $Scripts
@@ -46,7 +49,7 @@ function Invoke-ListCustomScripts {
     } catch {
         $ErrorMessage = Get-CippException -Exception $_
         Write-LogMessage -API $APIName -headers $Headers -message "Failed to list custom scripts: $($ErrorMessage.NormalizedError)" -Sev 'Error' -LogData $ErrorMessage
-        $StatusCode = [HttpStatusCode]::BadRequest
+        $StatusCode = [HttpStatusCode]::InternalServerError
         $Body = @{ Error = $ErrorMessage.NormalizedError }
     }
 
